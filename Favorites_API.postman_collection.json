@@ -1,0 +1,2029 @@
+{
+	"info": {
+		"_postman_id": "favorites-api-collection",
+		"name": "Favorites API",
+		"description": "Complete API collection for the Favorites API with demo data examples.\n\nNote: User identifiers in URLs (e.g., 'user1', 'user2') are user 'reference' values, not internal database IDs. The API uses references for stable, human-readable identifiers.\n\nImportant: \n- Assets must be created first using the Create Asset endpoint before adding them to favorites.\n- Asset IDs are automatically generated when creating assets. The format is {userReference}_favorite{number} (e.g., 'user1_favorite1', 'user1_favorite2').\n- When adding favorites, use the asset_reference (not the full asset object).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"health"
+							]
+						},
+						"description": "Check the health status of the API service"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Asset Management",
+			"item": [
+				{
+					"name": "Get All Assets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets"
+							]
+						},
+						"description": "Get all assets with pagination (default: page=1, page_size=20)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Assets - Paginated (Page 1, Size 10)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets?page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get paginated assets (page 1, 10 items per page)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Assets - Filter by Asset Type (Chart)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets?asset_type=chart&page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets"
+							],
+							"query": [
+								{
+									"key": "asset_type",
+									"value": "chart",
+									"description": "Filter by asset type: chart, insight, or audience"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get assets filtered by asset type (chart)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Assets - Filter by Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets?date_from=2024-01-01&date_to=2024-12-31&page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets"
+							],
+							"query": [
+								{
+									"key": "date_from",
+									"value": "2024-01-01",
+									"description": "Filter assets created after this date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)"
+								},
+								{
+									"key": "date_to",
+									"value": "2024-12-31",
+									"description": "Filter assets created before this date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get assets filtered by date range"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Assets - Combined Filters",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets?asset_type=insight&date_from=2024-01-01&page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets"
+							],
+							"query": [
+								{
+									"key": "asset_type",
+									"value": "insight",
+									"description": "Filter by asset type"
+								},
+								{
+									"key": "date_from",
+									"value": "2024-01-01",
+									"description": "Filter assets created after this date"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get assets with combined filters (asset type + date)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Asset - Chart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"user1\",\n  \"asset\": {\n    \"type\": \"chart\",\n    \"description\": \"Sales Overview\",\n    \"title\": \"Monthly Sales\",\n    \"x_axis\": \"Month\",\n    \"y_axis\": \"Revenue\",\n    \"data\": [\n      {\"label\": \"Jan\", \"value\": 1000},\n      {\"label\": \"Feb\", \"value\": 1500}\n    ]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets"
+							]
+						},
+						"description": "Create a new chart asset. Asset ID will be automatically generated (e.g., 'user1_favorite1'). The 'id' field in the request body will be ignored. user_id is required in the request body."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Asset - Insight",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"user1\",\n  \"asset\": {\n    \"type\": \"insight\",\n    \"description\": \"Consumer Behavior Insight\",\n    \"text\": \"85% of online shoppers prefer free shipping over fast shipping\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets"
+							]
+						},
+						"description": "Create a new insight asset. Asset ID will be automatically generated (e.g., 'user1_favorite1'). The 'id' field in the request body will be ignored. user_id is required in the request body."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Asset - Audience",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"user1\",\n  \"asset\": {\n    \"type\": \"audience\",\n    \"description\": \"Premium Shoppers Segment\",\n    \"gender\": \"female\",\n    \"birth_country\": \"USA\",\n    \"age_group\": {\n      \"min\": 30,\n      \"max\": 45\n    },\n    \"social_media_hours_min\": 2.5,\n    \"purchases_last_month\": 12\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets"
+							]
+						},
+						"description": "Create a new audience asset. Asset ID will be automatically generated (e.g., 'user1_favorite1'). The 'id' field in the request body will be ignored. user_id is required in the request body."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Asset",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets/user1_favorite1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets",
+								"user1_favorite1"
+							]
+						},
+						"description": "Retrieve an asset by its reference. Replace 'user1_favorite1' with the actual asset reference."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Asset",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"asset\": {\n    \"id\": \"user1_favorite1\",\n    \"type\": \"chart\",\n    \"description\": \"Updated Sales Overview\",\n    \"title\": \"Updated Monthly Sales\",\n    \"x_axis\": \"Month\",\n    \"y_axis\": \"Revenue\",\n    \"data\": [\n      {\"label\": \"Jan\", \"value\": 2000},\n      {\"label\": \"Feb\", \"value\": 2500}\n    ]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets/user1_favorite1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets",
+								"user1_favorite1"
+							]
+						},
+						"description": "Update an existing asset. Replace 'user1_favorite1' with the actual asset reference. The asset ID in the body must match the asset reference in the URL."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Asset",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/assets/user1_favorite1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"assets",
+								"user1_favorite1"
+							]
+						},
+						"description": "Delete an asset. This will also remove all favorites that reference this asset. Replace 'user1_favorite1' with the actual asset reference."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Lists Management",
+			"item": [
+				{
+					"name": "Get All Lists - user1",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists"
+							]
+						},
+						"description": "Get all lists for user1 (with pagination)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Lists - Paginated (Page 1, Size 10)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists?page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get paginated lists for user1 (page 1, 10 items per page)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Lists - Paginated (Page 2, Size 5)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists?page=2&page_size=5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "2"
+								},
+								{
+									"key": "page_size",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Get paginated lists for user1 (page 2, 5 items per page)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create List - Work",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Work\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists"
+							]
+						},
+						"description": "Create a new list named 'Work' for user1"
+					},
+					"response": []
+				},
+				{
+					"name": "Create List - Personal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Personal\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists"
+							]
+						},
+						"description": "Create a new list named 'Personal' for user1"
+					},
+					"response": []
+				},
+				{
+					"name": "Get List by Reference",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_work",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_work"
+							]
+						},
+						"description": "Get a specific list by its reference (replace with actual reference from Create List response)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete List",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_work",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_work"
+							]
+						},
+						"description": "Delete a list by its reference (replace with actual reference)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "List-based Favorites",
+			"item": [
+				{
+					"name": "Get Favorites in List",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_default/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_default",
+								"favorites"
+							]
+						},
+						"description": "Get all favorites in a specific list (with pagination, default page_size=20)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites in List - Paginated (Page 1, Size 10)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_default/favorites?page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_default",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get paginated favorites in a specific list (page 1, 10 items per page)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites in List - Paginated (Page 2, Size 5)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_default/favorites?page=2&page_size=5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_default",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "2"
+								},
+								{
+									"key": "page_size",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Get paginated favorites in a specific list (page 2, 5 items per page)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites in List - Filter by Asset Type (Chart)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_default/favorites?asset_type=chart&page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_default",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "asset_type",
+									"value": "chart",
+									"description": "Filter by asset type: chart, insight, or audience"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get favorites filtered by asset type (chart) in a specific list"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites in List - Filter by Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_default/favorites?date_from=2024-01-01&date_to=2024-12-31&page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_default",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "date_from",
+									"value": "2024-01-01",
+									"description": "Filter favorites added after this date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)"
+								},
+								{
+									"key": "date_to",
+									"value": "2024-12-31",
+									"description": "Filter favorites added before this date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get favorites filtered by date range in a specific list"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites in List - Combined Filters",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_default/favorites?asset_type=insight&date_from=2024-01-01&page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_default",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "asset_type",
+									"value": "insight",
+									"description": "Filter by asset type"
+								},
+								{
+									"key": "date_from",
+									"value": "2024-01-01",
+									"description": "Filter favorites added after this date"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get favorites with combined filters (asset type + date) in a specific list"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Favorite to List",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"asset_reference\": \"user1_favorite1\",\n  \"list_reference\": \"list_user1_work\",\n  \"sort_order\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_work/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_work",
+								"favorites"
+							]
+						},
+						"description": "Add an existing asset to a specific list. The asset must be created first using the Create Asset endpoint. Replace 'user1_favorite1' with the actual asset reference and 'list_user1_work' with the actual list reference. sort_order is optional (defaults to next sequential value)."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Favorite from List",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/lists/list_user1_work/favorites/chart_list_1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"lists",
+								"list_user1_work",
+								"favorites",
+								"chart_list_1"
+							]
+						},
+						"description": "Remove a favorite from a specific list"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "All Favorites (Paginated)",
+			"item": [
+				{
+					"name": "Get All Favorites - user1",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							]
+						},
+						"description": "Get all favorites for user1 across all lists (with pagination)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Favorites - Paginated (Page 1, Size 20)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites?page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get paginated favorites for user1 (page 1, 20 items per page)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Favorites - Paginated (Page 2, Size 10)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites?page=2&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "2"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get paginated favorites for user1 (page 2, 10 items per page)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Favorites - Filter by Asset Type (Audience)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites?asset_type=audience&page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "asset_type",
+									"value": "audience",
+									"description": "Filter by asset type: chart, insight, or audience"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get all favorites filtered by asset type (audience) across all lists"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Favorites - Filter by Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites?date_from=2024-01-01T00:00:00Z&date_to=2024-12-31T23:59:59Z&page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "date_from",
+									"value": "2024-01-01T00:00:00Z",
+									"description": "Filter favorites added after this date (ISO 8601 format)"
+								},
+								{
+									"key": "date_to",
+									"value": "2024-12-31T23:59:59Z",
+									"description": "Filter favorites added before this date (ISO 8601 format)"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get all favorites filtered by date range across all lists"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Favorites - Combined Filters",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites?asset_type=chart&date_from=2024-01-01&date_to=2024-12-31&page=1&page_size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							],
+							"query": [
+								{
+									"key": "asset_type",
+									"value": "chart",
+									"description": "Filter by asset type"
+								},
+								{
+									"key": "date_from",
+									"value": "2024-01-01",
+									"description": "Filter favorites added after this date"
+								},
+								{
+									"key": "date_to",
+									"value": "2024-12-31",
+									"description": "Filter favorites added before this date"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all favorites with combined filters (asset type + date range) across all lists"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Favorites - user2",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user2/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user2",
+								"favorites"
+							]
+						},
+						"description": "Get all favorites for user2 (Bob Smith) across all lists"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites - user2",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user2/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user2",
+								"favorites"
+							]
+						},
+						"description": "Get all favorites for user2 (Bob Smith)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites - user3",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user3/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user3",
+								"favorites"
+							]
+						},
+						"description": "Get all favorites for user3 (Charlie Brown)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites - user4",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user4/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user4",
+								"favorites"
+							]
+						},
+						"description": "Get all favorites for user4 (Diana Prince)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorites - user5",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user5/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user5",
+								"favorites"
+							]
+						},
+						"description": "Get all favorites for user5 (Eve Wilson)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Add Favorite",
+			"item": [
+				{
+					"name": "Add Chart Favorite",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"asset_reference\": \"user1_favorite1\",\n  \"sort_order\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							]
+						},
+						"description": "Add an existing chart asset to user1's favorites. The asset must be created first using the Create Asset endpoint. Replace 'user1_favorite1' with the actual asset reference. sort_order is optional (defaults to next sequential value)."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Insight Favorite",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"asset_reference\": \"user2_favorite1\",\n  \"sort_order\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user2/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user2",
+								"favorites"
+							]
+						},
+						"description": "Add an existing insight asset to user2's favorites. The asset must be created first using the Create Asset endpoint. Replace 'user2_favorite1' with the actual asset reference. sort_order is optional (defaults to next sequential value)."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Audience Favorite",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"asset_reference\": \"user3_favorite1\",\n  \"sort_order\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user3/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user3",
+								"favorites"
+							]
+						},
+						"description": "Add an existing audience asset to user3's favorites. The asset must be created first using the Create Asset endpoint. Replace 'user3_favorite1' with the actual asset reference. sort_order is optional (defaults to next sequential value)."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Chart with Demo Data (chart1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"asset_reference\": \"user1_favorite1\",\n  \"sort_order\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							]
+						},
+						"description": "Add chart1 (Monthly Sales Revenue) - Demo data. Note: Asset must be created first using Create Asset endpoint in the format {userReference}_favorite{number} (e.g., user1_favorite1). Replace asset_reference with the actual asset reference from Create Asset response."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Insight with Demo Data (insight1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"asset_reference\": \"user1_favorite1\",\n  \"sort_order\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							]
+						},
+						"description": "Add insight1 - Demo data. Note: Asset must be created first using Create Asset endpoint in the format {userReference}_favorite{number} (e.g., user1_favorite1). Replace asset_reference with the actual asset reference from Create Asset response."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Audience with Demo Data (audience1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"asset_reference\": \"user1_favorite1\",\n  \"sort_order\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites"
+							]
+						},
+						"description": "Add audience1 (Tech-Savvy Millennials) - Demo data. Note: Asset must be created first using Create Asset endpoint in the format {userReference}_favorite{number} (e.g., user1_favorite1). Replace asset_reference with the actual asset reference from Create Asset response."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Remove Favorite",
+			"item": [
+				{
+					"name": "Remove Favorite - chart1 from user1",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites/chart1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites",
+								"chart1"
+							]
+						},
+						"description": "Remove chart1 from user1's favorites"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Favorite - insight1 from user1",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites/insight1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites",
+								"insight1"
+							]
+						},
+						"description": "Remove insight1 from user1's favorites"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Favorite - audience1 from user1",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites/audience1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites",
+								"audience1"
+							]
+						},
+						"description": "Remove audience1 from user1's favorites"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Update Description",
+			"item": [
+				{
+					"name": "Update Description - chart1",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": \"Updated: Monthly Sales Revenue Overview with Q4 Data\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites/chart1/description",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites",
+								"chart1",
+								"description"
+							]
+						},
+						"description": "Update the description of chart1"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Description - insight1",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": \"Updated: Social Media Usage Statistics - 2024 Data\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites/insight1/description",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites",
+								"insight1",
+								"description"
+							]
+						},
+						"description": "Update the description of insight1"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Description - audience1",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": \"Updated: Tech-Savvy Millennials - Premium Segment\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites/audience1/description",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites",
+								"audience1",
+								"description"
+							]
+						},
+						"description": "Update the description of audience1"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Update Sort Order",
+			"item": [
+				{
+					"name": "Update Sort Order - Move to Position 0",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sort_order\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites/fav_user1_favorite1/sort-order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites",
+								"fav_user1_favorite1",
+								"sort-order"
+							]
+						},
+						"description": "Update the sort order of a favorite to position 0 (first position). The favoriteReference should be the actual favorite reference (e.g., 'fav_user1_favorite1') from the Get Favorites response. Lower sort_order values appear first."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Sort Order - Move to Position 5",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sort_order\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/user1/favorites/fav_user1_favorite2/sort-order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"user1",
+								"favorites",
+								"fav_user1_favorite2",
+								"sort-order"
+							]
+						},
+						"description": "Update the sort order of a favorite to position 5. Replace 'fav_user1_favorite2' with the actual favorite reference from Get Favorites response."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Demo Data Examples",
+			"item": [
+				{
+					"name": "All Chart Examples",
+					"item": [
+						{
+							"name": "Add chart2 - Social Media Usage",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user2_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user2/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user2",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user2_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add chart3 - E-commerce Conversion",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user3_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user3/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user3",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user3_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add chart4 - Customer Age Distribution",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user4_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user4/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user4",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user4_favorite1' with the actual asset reference."
+							}
+						}
+					]
+				},
+				{
+					"name": "All Insight Examples",
+					"item": [
+						{
+							"name": "Add insight2 - E-commerce Trends",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user2_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user2/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user2",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user2_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add insight3 - Remote Work Impact",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user3_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user3/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user3",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user3_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add insight4 - Consumer Behavior",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user4_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user4/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user4",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user4_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add insight5 - Digital Marketing",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user5_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user5/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user5",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user5_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add insight6 - Technology Adoption",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user5_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user5/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user5",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user5_favorite1' with the actual asset reference."
+							}
+						}
+					]
+				},
+				{
+					"name": "All Audience Examples",
+					"item": [
+						{
+							"name": "Add audience2 - Social Media Enthusiasts",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user2_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user2/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user2",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user2_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add audience3 - Professional Networkers",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user3_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user3/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user3",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user3_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add audience4 - Young Digital Natives",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user4_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user4/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user4",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user4_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add audience5 - International Shoppers",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user5_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user5/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user5",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user5_favorite1' with the actual asset reference."
+							}
+						},
+						{
+							"name": "Add audience6 - Mature Consumers",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"asset_reference\": \"user5_favorite1\",\n  \"sort_order\": 0\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/users/user5/favorites",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"user5",
+										"favorites"
+									]
+								},
+								"description": "Add an existing asset to favorites. First create the asset using Create Asset endpoint, then use the asset_reference here. Replace 'user5_favorite1' with the actual asset reference."
+							}
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}

@@ -1,0 +1,14 @@
+.git
+.gitignore
+*.md
+*.test
+*.swp
+*.swo
+*~
+.DS_Store
+vendor/
+coverage.out
+coverage.html
+
+
+
