@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ func TestFavoritesService_AddFavorite(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create default list first
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -32,12 +33,12 @@ func TestFavoritesService_AddFavorite(t *testing.T) {
 		YAxis: "Revenue",
 	}
 
-	_, err = service.CreateAsset("user1", chart)
+	_, err = service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
 
-	favorite, err := service.AddFavorite("user1", "chart1", list.Reference, nil)
+	favorite, err := service.AddFavorite(context.Background(), "user1", "chart1", list.Reference, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -56,25 +57,25 @@ func TestFavoritesService_AddFavorite_Validation(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create default list first
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
 
 	// Test empty user ID
-	_, err = service.AddFavorite("", "chart1", list.Reference, nil)
+	_, err = service.AddFavorite(context.Background(), "", "chart1", list.Reference, nil)
 	if err == nil {
 		t.Error("Expected error for empty user ID")
 	}
 
 	// Test empty asset reference
-	_, err = service.AddFavorite("user1", "", list.Reference, nil)
+	_, err = service.AddFavorite(context.Background(), "user1", "", list.Reference, nil)
 	if err == nil {
 		t.Error("Expected error for empty asset reference")
 	}
 
 	// Test non-existent asset
-	_, err = service.AddFavorite("user1", "nonexistent", list.Reference, nil)
+	_, err = service.AddFavorite(context.Background(), "user1", "nonexistent", list.Reference, nil)
 	if err == nil {
 		t.Error("Expected error for non-existent asset")
 	}
@@ -85,7 +86,7 @@ func TestFavoritesService_RemoveFavorite(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create default list first
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -101,13 +102,13 @@ func TestFavoritesService_RemoveFavorite(t *testing.T) {
 		Title: "Sales Chart",
 	}
 
-	_, err = service.CreateAsset("user1", chart)
+	_, err = service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	service.AddFavorite("user1", "chart1", list.Reference, nil)
+	service.AddFavorite(context.Background(), "user1", "chart1", list.Reference, nil)
 
-	err = service.RemoveFavorite("user1", "chart1", list.Reference)
+	err = service.RemoveFavorite(context.Background(), "user1", "chart1", list.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -118,7 +119,7 @@ func TestFavoritesService_GetFavorites(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create default list first
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -145,18 +146,18 @@ func TestFavoritesService_GetFavorites(t *testing.T) {
 		Text: "Test insight",
 	}
 
-	_, err = service.CreateAsset("user1", chart)
+	_, err = service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	_, err = service.CreateAsset("user1", insight)
+	_, err = service.CreateAsset(context.Background(), "user1", insight)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	service.AddFavorite("user1", "chart1", list.Reference, nil)
-	service.AddFavorite("user1", "insight1", list.Reference, nil)
+	service.AddFavorite(context.Background(), "user1", "chart1", list.Reference, nil)
+	service.AddFavorite(context.Background(), "user1", "insight1", list.Reference, nil)
 
-	favorites, err := service.GetFavorites("user1", list.Reference)
+	favorites, err := service.GetFavorites(context.Background(), "user1", list.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -171,7 +172,7 @@ func TestFavoritesService_GetFavoritesPaginated(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create default list first
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -188,15 +189,15 @@ func TestFavoritesService_GetFavoritesPaginated(t *testing.T) {
 			},
 			Title: fmt.Sprintf("Chart %d", i),
 		}
-		_, err := service.CreateAsset("user1", chart)
+		_, err := service.CreateAsset(context.Background(), "user1", chart)
 		if err != nil {
 			t.Fatalf("Failed to create asset: %v", err)
 		}
-		service.AddFavorite("user1", fmt.Sprintf("chart%d", i), list.Reference, nil)
+		service.AddFavorite(context.Background(), "user1", fmt.Sprintf("chart%d", i), list.Reference, nil)
 	}
 
 	// Test pagination
-	favorites, totalCount, err := service.GetFavoritesPaginated("user1", list.Reference, 1, 10, nil)
+	favorites, totalCount, err := service.GetFavoritesPaginated(context.Background(), "user1", list.Reference, 1, 10, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -209,7 +210,7 @@ func TestFavoritesService_GetFavoritesPaginated(t *testing.T) {
 	}
 
 	// Test second page
-	favorites2, totalCount2, err := service.GetFavoritesPaginated("user1", list.Reference, 2, 10, nil)
+	favorites2, totalCount2, err := service.GetFavoritesPaginated(context.Background(), "user1", list.Reference, 2, 10, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -227,7 +228,7 @@ func TestFavoritesService_UpdateDescription(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create default list first
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -243,18 +244,18 @@ func TestFavoritesService_UpdateDescription(t *testing.T) {
 		Title: "Sales Chart",
 	}
 
-	_, err = service.CreateAsset("user1", chart)
+	_, err = service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	service.AddFavorite("user1", "chart1", list.Reference, nil)
+	service.AddFavorite(context.Background(), "user1", "chart1", list.Reference, nil)
 
-	err = service.UpdateDescription("chart1", "New Description")
+	err = service.UpdateDescription(context.Background(), "chart1", "New Description")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	favorites, _ := service.GetFavorites("user1", list.Reference)
+	favorites, _ := service.GetFavorites(context.Background(), "user1", list.Reference)
 	if favorites[0].Asset.GetDescription() != "New Description" {
 		t.Errorf("Expected 'New Description', got %s", favorites[0].Asset.GetDescription())
 	}
@@ -420,11 +421,11 @@ func TestFavoritesService_GetAllFavorites(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create two lists
-	list1, err := service.CreateList("user1", "default")
+	list1, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
-	list2, err := service.CreateList("user1", "work")
+	list2, err := service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -451,19 +452,19 @@ func TestFavoritesService_GetAllFavorites(t *testing.T) {
 		Text: "Test insight",
 	}
 
-	_, err = service.CreateAsset("user1", chart1)
+	_, err = service.CreateAsset(context.Background(), "user1", chart1)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	_, err = service.CreateAsset("user1", insight1)
+	_, err = service.CreateAsset(context.Background(), "user1", insight1)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	service.AddFavorite("user1", "chart1", list1.Reference, nil)
-	service.AddFavorite("user1", "insight1", list2.Reference, nil)
+	service.AddFavorite(context.Background(), "user1", "chart1", list1.Reference, nil)
+	service.AddFavorite(context.Background(), "user1", "insight1", list2.Reference, nil)
 
 	// Get all favorites across all lists
-	allFavorites, err := service.GetAllFavorites("user1")
+	allFavorites, err := service.GetAllFavorites(context.Background(), "user1")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -478,7 +479,7 @@ func TestFavoritesService_GetAllFavoritesPaginated(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create list
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -495,15 +496,15 @@ func TestFavoritesService_GetAllFavoritesPaginated(t *testing.T) {
 			},
 			Title: fmt.Sprintf("Chart %d", i),
 		}
-		_, err := service.CreateAsset("user1", chart)
+		_, err := service.CreateAsset(context.Background(), "user1", chart)
 		if err != nil {
 			t.Fatalf("Failed to create asset: %v", err)
 		}
-		service.AddFavorite("user1", fmt.Sprintf("chart%d", i), list.Reference, nil)
+		service.AddFavorite(context.Background(), "user1", fmt.Sprintf("chart%d", i), list.Reference, nil)
 	}
 
 	// Test pagination
-	favorites, totalCount, err := service.GetAllFavoritesPaginated("user1", 1, 10, nil)
+	favorites, totalCount, err := service.GetAllFavoritesPaginated(context.Background(), "user1", 1, 10, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -516,7 +517,7 @@ func TestFavoritesService_GetAllFavoritesPaginated(t *testing.T) {
 	}
 
 	// Test second page
-	favorites2, totalCount2, err := service.GetAllFavoritesPaginated("user1", 2, 10, nil)
+	favorites2, totalCount2, err := service.GetAllFavoritesPaginated(context.Background(), "user1", 2, 10, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -535,14 +536,14 @@ func TestFavoritesService_GetAllListsPaginated(t *testing.T) {
 
 	// Create multiple lists
 	for i := 1; i <= 15; i++ {
-		_, err := service.CreateList("user1", fmt.Sprintf("list%d", i))
+		_, err := service.CreateList(context.Background(), "user1", fmt.Sprintf("list%d", i))
 		if err != nil {
 			t.Fatalf("Failed to create list: %v", err)
 		}
 	}
 
 	// Test pagination
-	lists, totalCount, err := service.GetAllListsPaginated("user1", 1, 5)
+	lists, totalCount, err := service.GetAllListsPaginated(context.Background(), "user1", 1, 5)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -560,13 +561,13 @@ func TestFavoritesService_GetList(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create a list
-	list, err := service.CreateList("user1", "work")
+	list, err := service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
 
 	// Get the list
-	retrievedList, err := service.GetList("user1", list.Reference)
+	retrievedList, err := service.GetList(context.Background(), "user1", list.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -583,7 +584,7 @@ func TestFavoritesService_GetList_NotFound(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	_, err := service.GetList("user1", "nonexistent_list")
+	_, err := service.GetList(context.Background(), "user1", "nonexistent_list")
 	if err == nil {
 		t.Error("Expected error for nonexistent list")
 	}
@@ -593,7 +594,7 @@ func TestFavoritesService_GetList_EmptyUserID(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	_, err := service.GetList("", "list1")
+	_, err := service.GetList(context.Background(), "", "list1")
 	if err == nil {
 		t.Error("Expected error for empty user ID")
 	}
@@ -604,13 +605,13 @@ func TestFavoritesService_GetListByName(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create a list
-	_, err := service.CreateList("user1", "work")
+	_, err := service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
 
 	// Get the list by name
-	list, err := service.GetListByName("user1", "work")
+	list, err := service.GetListByName(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -624,7 +625,7 @@ func TestFavoritesService_GetListByName_NotFound(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	_, err := service.GetListByName("user1", "nonexistent")
+	_, err := service.GetListByName(context.Background(), "user1", "nonexistent")
 	if err == nil {
 		t.Error("Expected error for nonexistent list name")
 	}
@@ -635,17 +636,17 @@ func TestFavoritesService_GetAllLists(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create multiple lists
-	_, err := service.CreateList("user1", "default")
+	_, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
-	_, err = service.CreateList("user1", "work")
+	_, err = service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
 
 	// Get all lists
-	lists, err := service.GetAllLists("user1")
+	lists, err := service.GetAllLists(context.Background(), "user1")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -659,7 +660,7 @@ func TestFavoritesService_GetAllLists_Empty(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	lists, err := service.GetAllLists("user1")
+	lists, err := service.GetAllLists(context.Background(), "user1")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -678,19 +679,19 @@ func TestFavoritesService_DeleteList(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create a list
-	list, err := service.CreateList("user1", "work")
+	list, err := service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
 
 	// Delete the list
-	err = service.DeleteList("user1", list.Reference)
+	err = service.DeleteList(context.Background(), "user1", list.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
 	// Verify list is deleted
-	_, err = service.GetList("user1", list.Reference)
+	_, err = service.GetList(context.Background(), "user1", list.Reference)
 	if err == nil {
 		t.Error("Expected list to be deleted")
 	}
@@ -700,7 +701,7 @@ func TestFavoritesService_DeleteList_NotFound(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	err := service.DeleteList("user1", "nonexistent_list")
+	err := service.DeleteList(context.Background(), "user1", "nonexistent_list")
 	if err == nil {
 		t.Error("Expected error for nonexistent list")
 	}
@@ -711,7 +712,7 @@ func TestFavoritesService_RemoveFavoriteByReference(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create list
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -727,23 +728,23 @@ func TestFavoritesService_RemoveFavoriteByReference(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err = service.CreateAsset("user1", chart)
+	_, err = service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	favorite, err := service.AddFavorite("user1", "chart1", list.Reference, nil)
+	favorite, err := service.AddFavorite(context.Background(), "user1", "chart1", list.Reference, nil)
 	if err != nil {
 		t.Fatalf("Failed to add favorite: %v", err)
 	}
 
 	// Remove by reference
-	err = service.RemoveFavoriteByReference(favorite.Reference)
+	err = service.RemoveFavoriteByReference(context.Background(), favorite.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
 	// Verify favorite is removed
-	favorites, _ := service.GetFavorites("user1", list.Reference)
+	favorites, _ := service.GetFavorites(context.Background(), "user1", list.Reference)
 	if len(favorites) != 0 {
 		t.Errorf("Expected 0 favorites after removal, got %d", len(favorites))
 	}
@@ -753,7 +754,7 @@ func TestFavoritesService_RemoveFavoriteByReference_NotFound(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	err := service.RemoveFavoriteByReference("nonexistent_reference")
+	err := service.RemoveFavoriteByReference(context.Background(), "nonexistent_reference")
 	if err == nil {
 		t.Error("Expected error for nonexistent favorite reference")
 	}
@@ -764,12 +765,12 @@ func TestFavoritesService_GetFavorites_EmptyList(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create list but don't add favorites
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
 
-	favorites, err := service.GetFavorites("user1", list.Reference)
+	favorites, err := service.GetFavorites(context.Background(), "user1", list.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -784,7 +785,7 @@ func TestFavoritesService_GetFavorites_CreatesDefaultList(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Get favorites without creating a list first (should create default)
-	favorites, err := service.GetFavorites("user1", "")
+	favorites, err := service.GetFavorites(context.Background(), "user1", "")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -794,7 +795,7 @@ func TestFavoritesService_GetFavorites_CreatesDefaultList(t *testing.T) {
 	}
 
 	// Verify default list was created
-	_, err = service.GetListByName("user1", "default")
+	_, err = service.GetListByName(context.Background(), "user1", "default")
 	if err != nil {
 		t.Error("Expected default list to be created")
 	}
@@ -805,12 +806,12 @@ func TestFavoritesService_GetFavoritesPaginated_EmptyList(t *testing.T) {
 	service := NewFavoritesService(storage)
 
 	// Create list but don't add favorites
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
 
-	favorites, totalCount, err := service.GetFavoritesPaginated("user1", list.Reference, 1, 10, nil)
+	favorites, totalCount, err := service.GetFavoritesPaginated(context.Background(), "user1", list.Reference, 1, 10, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -828,7 +829,7 @@ func TestFavoritesService_GetFavoritesPaginated_BoundaryConditions(t *testing.T)
 	service := NewFavoritesService(storage)
 
 	// Create list
-	list, err := service.CreateList("user1", "default")
+	list, err := service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -845,15 +846,15 @@ func TestFavoritesService_GetFavoritesPaginated_BoundaryConditions(t *testing.T)
 			},
 			Title: fmt.Sprintf("Chart %d", i),
 		}
-		_, err := service.CreateAsset("user1", chart)
+		_, err := service.CreateAsset(context.Background(), "user1", chart)
 		if err != nil {
 			t.Fatalf("Failed to create asset: %v", err)
 		}
-		service.AddFavorite("user1", fmt.Sprintf("chart%d", i), list.Reference, nil)
+		service.AddFavorite(context.Background(), "user1", fmt.Sprintf("chart%d", i), list.Reference, nil)
 	}
 
 	// Test page beyond total
-	favorites, totalCount, err := service.GetFavoritesPaginated("user1", list.Reference, 999, 10, nil)
+	favorites, totalCount, err := service.GetFavoritesPaginated(context.Background(), "user1", list.Reference, 999, 10, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -870,7 +871,7 @@ func TestFavoritesService_UpdateDescription_NotFound(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	err := service.UpdateDescription("nonexistent_asset", "New Description")
+	err := service.UpdateDescription(context.Background(), "nonexistent_asset", "New Description")
 	if err == nil {
 		t.Error("Expected error for nonexistent asset")
 	}
@@ -989,7 +990,7 @@ func TestFavoritesService_GetAllFavoritesPaginated_EmptyUser(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	favorites, totalCount, err := service.GetAllFavoritesPaginated("user1", 1, 10, nil)
+	favorites, totalCount, err := service.GetAllFavoritesPaginated(context.Background(), "user1", 1, 10, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -1006,7 +1007,7 @@ func TestFavoritesService_GetAllListsPaginated_Empty(t *testing.T) {
 	storage := storage.NewMemoryStorage()
 	service := NewFavoritesService(storage)
 
-	lists, totalCount, err := service.GetAllListsPaginated("user1", 1, 10)
+	lists, totalCount, err := service.GetAllListsPaginated(context.Background(), "user1", 1, 10)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

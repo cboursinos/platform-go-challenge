@@ -38,8 +38,13 @@ func NewRedisCache(addr, password string, db int, ttl time.Duration) (*RedisCach
 }
 
 // Get retrieves a value from cache
-func (c *RedisCache) Get(key string) ([]byte, error) {
-	val, err := c.client.Get(c.ctx, key).Bytes()
+func (c *RedisCache) Get(ctx context.Context, key string) ([]byte, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	val, err := c.client.Get(ctx, key).Bytes()
 	if err == redis.Nil {
 		return nil, ErrCacheMiss
 	}
@@ -50,31 +55,51 @@ func (c *RedisCache) Get(key string) ([]byte, error) {
 }
 
 // Set stores a value in cache
-func (c *RedisCache) Set(key string, value []byte) error {
-	return c.SetWithTTL(key, value, c.ttl)
+func (c *RedisCache) Set(ctx context.Context, key string, value []byte) error {
+	return c.SetWithTTL(ctx, key, value, c.ttl)
 }
 
 // SetWithTTL stores a value in cache with custom TTL
-func (c *RedisCache) SetWithTTL(key string, value []byte, ttl time.Duration) error {
-	if err := c.client.Set(c.ctx, key, value, ttl).Err(); err != nil {
+func (c *RedisCache) SetWithTTL(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	if err := c.client.Set(ctx, key, value, ttl).Err(); err != nil {
 		return fmt.Errorf("failed to set cache: %w", err)
 	}
 	return nil
 }
 
 // Delete removes a value from cache
-func (c *RedisCache) Delete(key string) error {
-	if err := c.client.Del(c.ctx, key).Err(); err != nil {
+func (c *RedisCache) Delete(ctx context.Context, key string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	if err := c.client.Del(ctx, key).Err(); err != nil {
 		return fmt.Errorf("failed to delete from cache: %w", err)
 	}
 	return nil
 }
 
 // DeletePattern removes all keys matching a pattern
-func (c *RedisCache) DeletePattern(pattern string) error {
-	iter := c.client.Scan(c.ctx, 0, pattern, 0).Iterator()
-	for iter.Next(c.ctx) {
-		if err := c.client.Del(c.ctx, iter.Val()).Err(); err != nil {
+func (c *RedisCache) DeletePattern(ctx context.Context, pattern string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	iter := c.client.Scan(ctx, 0, pattern, 0).Iterator()
+	for iter.Next(ctx) {
+		// Check context during iteration
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		if err := c.client.Del(ctx, iter.Val()).Err(); err != nil {
 			return fmt.Errorf("failed to delete pattern from cache: %w", err)
 		}
 	}

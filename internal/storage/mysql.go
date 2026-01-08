@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -135,10 +136,10 @@ func (s *MySQLStorage) initSchema() error {
 
 // getUserIDFromReference gets the internal user ID from the user reference
 // Returns an error if the user doesn't exist (users are not created on-demand)
-func (s *MySQLStorage) getUserIDFromReference(userReference string) (int, error) {
+func (s *MySQLStorage) getUserIDFromReference(ctx context.Context, userReference string) (int, error) {
 	var userID int
 	query := `SELECT id FROM users WHERE reference = ?`
-	err := s.db.QueryRow(query, userReference).Scan(&userID)
+	err := s.db.QueryRowContext(ctx, query, userReference).Scan(&userID)
 	if err == sql.ErrNoRows {
 		return 0, fmt.Errorf("user with reference %s not found", userReference)
 	}
@@ -163,10 +164,10 @@ func (s *MySQLStorage) getUserReferenceFromID(userID int) (string, error) {
 }
 
 // getAssetIDFromReference gets the internal asset ID from the asset reference
-func (s *MySQLStorage) getAssetIDFromReference(assetReference string) (int, error) {
+func (s *MySQLStorage) getAssetIDFromReference(ctx context.Context, assetReference string) (int, error) {
 	var assetID int
 	query := `SELECT id FROM assets WHERE reference = ?`
-	err := s.db.QueryRow(query, assetReference).Scan(&assetID)
+	err := s.db.QueryRowContext(ctx, query, assetReference).Scan(&assetID)
 	if err == sql.ErrNoRows {
 		return 0, fmt.Errorf("asset with reference %s not found", assetReference)
 	}
@@ -196,10 +197,10 @@ func (s *MySQLStorage) generateListReference(userReference, listName string) str
 }
 
 // getListIDFromReference gets the internal list ID from the list reference
-func (s *MySQLStorage) getListIDFromReference(listReference string) (int, error) {
+func (s *MySQLStorage) getListIDFromReference(ctx context.Context, listReference string) (int, error) {
 	var listID int
 	query := `SELECT id FROM lists WHERE reference = ?`
-	err := s.db.QueryRow(query, listReference).Scan(&listID)
+	err := s.db.QueryRowContext(ctx, query, listReference).Scan(&listID)
 	if err == sql.ErrNoRows {
 		return 0, fmt.Errorf("list with reference %s not found", listReference)
 	}
@@ -237,10 +238,15 @@ func (s *MySQLStorage) generateFavoriteReference(userReference, assetReference, 
 //   - When assets exist: SELECT FOR UPDATE locks the row, preventing concurrent reads
 //   - When no assets exist: Transaction isolation prevents race conditions between concurrent calls
 //   - Multiple concurrent requests will serialize through the transaction, ensuring unique IDs
-func (s *MySQLStorage) generateNextAssetID(userReference string) (string, error) {
+func (s *MySQLStorage) generateNextAssetID(ctx context.Context, userReference string) (string, error) {
+	// Check context before starting transaction
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
 	// Start a transaction with REPEATABLE READ isolation level to prevent race conditions
 	// This ensures that concurrent requests see a consistent view of the data
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -265,7 +271,7 @@ func (s *MySQLStorage) generateNextAssetID(userReference string) (string, error)
 	regexPattern := fmt.Sprintf("^%s[0-9]+$", prefix)
 	
 	var maxReference string
-	err = tx.QueryRow(query, pattern, regexPattern, prefixLen+1).Scan(&maxReference)
+	err = tx.QueryRowContext(ctx, query, pattern, regexPattern, prefixLen+1).Scan(&maxReference)
 	
 	var nextNumber int
 	if err == sql.ErrNoRows {
@@ -299,14 +305,19 @@ func (s *MySQLStorage) generateNextAssetID(userReference string) (string, error)
 
 // GenerateNextAssetID generates the next sequential asset ID for a user
 // Implements the Storage interface
-func (s *MySQLStorage) GenerateNextAssetID(userReference string) (string, error) {
-	return s.generateNextAssetID(userReference)
+func (s *MySQLStorage) GenerateNextAssetID(ctx context.Context, userReference string) (string, error) {
+	return s.generateNextAssetID(ctx, userReference)
 }
 
 // CreateList creates a new list for a user
-func (s *MySQLStorage) CreateList(userReference, listName string) (*models.List, error) {
+func (s *MySQLStorage) CreateList(ctx context.Context, userReference, listName string) (*models.List, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +329,7 @@ func (s *MySQLStorage) CreateList(userReference, listName string) (*models.List,
 	var existingID int
 	var existingReference string
 	checkQuery := `SELECT id, reference FROM lists WHERE user_id = ? AND name = ?`
-	err = s.db.QueryRow(checkQuery, internalUserID, listName).Scan(&existingID, &existingReference)
+	err = s.db.QueryRowContext(ctx, checkQuery, internalUserID, listName).Scan(&existingID, &existingReference)
 	
 	if err == nil {
 		// List already exists, return it
@@ -333,7 +344,7 @@ func (s *MySQLStorage) CreateList(userReference, listName string) (*models.List,
 	// Create new list
 	now := time.Now()
 	insertQuery := `INSERT INTO lists (reference, user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`
-	result, err := s.db.Exec(insertQuery, listReference, internalUserID, listName, now, now)
+	result, err := s.db.ExecContext(ctx, insertQuery, listReference, internalUserID, listName, now, now)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create list: %w", err)
 	}
@@ -354,9 +365,14 @@ func (s *MySQLStorage) CreateList(userReference, listName string) (*models.List,
 }
 
 // GetList retrieves a list by reference
-func (s *MySQLStorage) GetList(userReference, listReference string) (*models.List, error) {
+func (s *MySQLStorage) GetList(ctx context.Context, userReference, listReference string) (*models.List, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +380,7 @@ func (s *MySQLStorage) GetList(userReference, listReference string) (*models.Lis
 	query := `SELECT id, reference, user_id, name, created_at, updated_at FROM lists WHERE reference = ? AND user_id = ?`
 	var list models.List
 	var internalUserIDCheck int
-	err = s.db.QueryRow(query, listReference, internalUserID).Scan(
+	err = s.db.QueryRowContext(ctx, query, listReference, internalUserID).Scan(
 		&list.ID,
 		&list.Reference,
 		&internalUserIDCheck,
@@ -384,9 +400,14 @@ func (s *MySQLStorage) GetList(userReference, listReference string) (*models.Lis
 }
 
 // GetListByName retrieves a list by name for a user
-func (s *MySQLStorage) GetListByName(userReference, listName string) (*models.List, error) {
+func (s *MySQLStorage) GetListByName(ctx context.Context, userReference, listName string) (*models.List, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +415,7 @@ func (s *MySQLStorage) GetListByName(userReference, listName string) (*models.Li
 	query := `SELECT id, reference, user_id, name, created_at, updated_at FROM lists WHERE user_id = ? AND name = ?`
 	var list models.List
 	var internalUserIDCheck int
-	err = s.db.QueryRow(query, internalUserID, listName).Scan(
+	err = s.db.QueryRowContext(ctx, query, internalUserID, listName).Scan(
 		&list.ID,
 		&list.Reference,
 		&internalUserIDCheck,
@@ -414,15 +435,20 @@ func (s *MySQLStorage) GetListByName(userReference, listName string) (*models.Li
 }
 
 // GetAllLists returns all lists for a user
-func (s *MySQLStorage) GetAllLists(userReference string) ([]*models.List, error) {
+func (s *MySQLStorage) GetAllLists(ctx context.Context, userReference string) ([]*models.List, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, err
 	}
 
 	query := `SELECT id, reference, user_id, name, created_at, updated_at FROM lists WHERE user_id = ? ORDER BY name`
-	rows, err := s.db.Query(query, internalUserID)
+	rows, err := s.db.QueryContext(ctx, query, internalUserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query lists: %w", err)
 	}
@@ -430,6 +456,11 @@ func (s *MySQLStorage) GetAllLists(userReference string) ([]*models.List, error)
 
 	var lists []*models.List
 	for rows.Next() {
+		// Check context during iteration
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		var list models.List
 		var internalUserIDCheck int
 		if err := rows.Scan(&list.ID, &list.Reference, &internalUserIDCheck, &list.Name, &list.CreatedAt, &list.UpdatedAt); err != nil {
@@ -445,7 +476,7 @@ func (s *MySQLStorage) GetAllLists(userReference string) ([]*models.List, error)
 
 	// If no lists found, create default list
 	if len(lists) == 0 {
-		defaultList, err := s.CreateList(userReference, "default")
+		defaultList, err := s.CreateList(ctx, userReference, "default")
 		if err != nil {
 			return nil, err
 		}
@@ -456,16 +487,21 @@ func (s *MySQLStorage) GetAllLists(userReference string) ([]*models.List, error)
 }
 
 // DeleteList deletes a list and all its favorites (CASCADE)
-func (s *MySQLStorage) DeleteList(userReference, listReference string) error {
+func (s *MySQLStorage) DeleteList(ctx context.Context, userReference, listReference string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return err
 	}
 
 	// Get internal list ID first (needed for deleting favorites)
 	var internalListID int
-	err = s.db.QueryRow("SELECT id FROM lists WHERE reference = ? AND user_id = ?", listReference, internalUserID).Scan(&internalListID)
+	err = s.db.QueryRowContext(ctx, "SELECT id FROM lists WHERE reference = ? AND user_id = ?", listReference, internalUserID).Scan(&internalListID)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("list with reference %s not found", listReference)
 	}
@@ -474,20 +510,25 @@ func (s *MySQLStorage) DeleteList(userReference, listReference string) error {
 	}
 
 	// Start a transaction to ensure both deletions succeed or fail together
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
+	// Check context before operations
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Delete all favorites in this list first
-	_, err = tx.Exec("DELETE FROM favorites WHERE list_id = ?", internalListID)
+	_, err = tx.ExecContext(ctx, "DELETE FROM favorites WHERE list_id = ?", internalListID)
 	if err != nil {
 		return fmt.Errorf("failed to delete favorites: %w", err)
 	}
 
 	// Delete the list
-	result, err := tx.Exec("DELETE FROM lists WHERE id = ? AND user_id = ?", internalListID, internalUserID)
+	result, err := tx.ExecContext(ctx, "DELETE FROM lists WHERE id = ? AND user_id = ?", internalListID, internalUserID)
 	if err != nil {
 		return fmt.Errorf("failed to delete list: %w", err)
 	}
@@ -514,13 +555,18 @@ func (s *MySQLStorage) DeleteList(userReference, listReference string) error {
 // assetReference is the asset reference (e.g., "user1_favorite1")
 // listReference is the list reference (e.g., "list_user1_default")
 // sortOrder is optional - if nil, will use next sequential value
-func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference string, sortOrder *int) (*models.Favorite, error) {
+func (s *MySQLStorage) AddFavorite(ctx context.Context, userReference, assetReference, listReference string, sortOrder *int) (*models.Favorite, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get or create default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userReference, "default")
+		list, err := s.GetListByName(ctx, userReference, "default")
 		if err != nil {
 			// Create default list if it doesn't exist
-			list, err = s.CreateList(userReference, "default")
+			list, err = s.CreateList(ctx, userReference, "default")
 			if err != nil {
 				return nil, err
 			}
@@ -528,14 +574,14 @@ func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference 
 		listReference = list.Reference
 	}
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify asset exists
 	var internalAssetID int
-	err = s.db.QueryRow("SELECT id FROM assets WHERE reference = ?", assetReference).Scan(&internalAssetID)
+	err = s.db.QueryRowContext(ctx, "SELECT id FROM assets WHERE reference = ?", assetReference).Scan(&internalAssetID)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("asset with reference %s not found", assetReference)
 	}
@@ -543,23 +589,28 @@ func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference 
 		return nil, fmt.Errorf("failed to get asset ID: %w", err)
 	}
 
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
+	// Check context before operations
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 
 	// Get internal list ID from reference
-	internalListID, err := s.getListIDFromReference(listReference)
+	internalListID, err := s.getListIDFromReference(ctx, listReference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get list ID: %w", err)
 	}
 
 	// Get list name for response
 	var listName string
-	err = tx.QueryRow("SELECT name FROM lists WHERE id = ?", internalListID).Scan(&listName)
+	err = tx.QueryRowContext(ctx, "SELECT name FROM lists WHERE id = ?", internalListID).Scan(&listName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get list name: %w", err)
 	}
@@ -572,7 +623,7 @@ func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference 
 	var existingAddedAt time.Time
 	var existingSortOrder int
 	checkQuery := `SELECT id, added_at, sort_order FROM favorites WHERE user_id = ? AND asset_id = ? AND list_id = ?`
-	err = tx.QueryRow(checkQuery, internalUserID, internalAssetID, internalListID).Scan(&existingID, &existingAddedAt, &existingSortOrder)
+	err = tx.QueryRowContext(ctx, checkQuery, internalUserID, internalAssetID, internalListID).Scan(&existingID, &existingAddedAt, &existingSortOrder)
 
 	var favoriteID int
 	var addedAt time.Time
@@ -586,7 +637,7 @@ func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference 
 			// Get the next sort_order value
 			var maxSortOrder sql.NullInt64
 			maxQuery := `SELECT MAX(sort_order) FROM favorites WHERE user_id = ? AND list_id = ?`
-			err = tx.QueryRow(maxQuery, internalUserID, internalListID).Scan(&maxSortOrder)
+			err = tx.QueryRowContext(ctx, maxQuery, internalUserID, internalListID).Scan(&maxSortOrder)
 			if err != nil && err != sql.ErrNoRows {
 				return nil, fmt.Errorf("failed to get max sort_order: %w", err)
 			}
@@ -600,7 +651,7 @@ func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference 
 		addedAt = now
 		insertQuery := `INSERT INTO favorites (reference, user_id, asset_id, list_id, sort_order, added_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?)`
-		result, err := tx.Exec(insertQuery, favoriteReference, internalUserID, internalAssetID, internalListID, finalSortOrder, addedAt, now)
+		result, err := tx.ExecContext(ctx, insertQuery, favoriteReference, internalUserID, internalAssetID, internalListID, finalSortOrder, addedAt, now)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert favorite: %w", err)
 		}
@@ -619,14 +670,14 @@ func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference 
 			// Update sort_order if provided
 			finalSortOrder = *sortOrder
 			updateQuery := `UPDATE favorites SET sort_order = ?, updated_at = ?, reference = ? WHERE id = ?`
-			if _, err := tx.Exec(updateQuery, finalSortOrder, now, favoriteReference, favoriteID); err != nil {
+			if _, err := tx.ExecContext(ctx, updateQuery, finalSortOrder, now, favoriteReference, favoriteID); err != nil {
 				return nil, fmt.Errorf("failed to update favorite: %w", err)
 			}
 		} else {
 			// Keep existing sort_order
 			finalSortOrder = existingSortOrder
 			updateQuery := `UPDATE favorites SET updated_at = ?, reference = ? WHERE id = ?`
-			if _, err := tx.Exec(updateQuery, now, favoriteReference, favoriteID); err != nil {
+			if _, err := tx.ExecContext(ctx, updateQuery, now, favoriteReference, favoriteID); err != nil {
 				return nil, fmt.Errorf("failed to update favorite: %w", err)
 			}
 		}
@@ -637,7 +688,7 @@ func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference 
 	}
 
 	// Get asset for response
-	asset, err := s.GetAsset(assetReference)
+	asset, err := s.GetAsset(ctx, assetReference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get asset: %w", err)
 	}
@@ -659,10 +710,15 @@ func (s *MySQLStorage) AddFavorite(userReference, assetReference, listReference 
 
 // RemoveFavorite removes a favorite for a user from a specific list
 // userReference, assetReference, and listReference are the reference values (e.g., "user1", "chart1", "list_user1_default")
-func (s *MySQLStorage) RemoveFavorite(userReference, assetReference, listReference string) error {
+func (s *MySQLStorage) RemoveFavorite(ctx context.Context, userReference, assetReference, listReference string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userReference, "default")
+		list, err := s.GetListByName(ctx, userReference, "default")
 		if err != nil {
 			return ErrFavoriteNotFound
 		}
@@ -670,25 +726,25 @@ func (s *MySQLStorage) RemoveFavorite(userReference, assetReference, listReferen
 	}
 
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return err
 	}
 
 	// Get internal asset ID from reference
-	internalAssetID, err := s.getAssetIDFromReference(assetReference)
+	internalAssetID, err := s.getAssetIDFromReference(ctx, assetReference)
 	if err != nil {
 		return err
 	}
 
 	// Get internal list ID from reference
-	internalListID, err := s.getListIDFromReference(listReference)
+	internalListID, err := s.getListIDFromReference(ctx, listReference)
 	if err != nil {
 		return ErrFavoriteNotFound
 	}
 
 	query := `DELETE FROM favorites WHERE user_id = ? AND asset_id = ? AND list_id = ?`
-	result, err := s.db.Exec(query, internalUserID, internalAssetID, internalListID)
+	result, err := s.db.ExecContext(ctx, query, internalUserID, internalAssetID, internalListID)
 	if err != nil {
 		return fmt.Errorf("failed to delete favorite: %w", err)
 	}
@@ -706,9 +762,14 @@ func (s *MySQLStorage) RemoveFavorite(userReference, assetReference, listReferen
 }
 
 // RemoveFavoriteByReference removes a favorite by its reference
-func (s *MySQLStorage) RemoveFavoriteByReference(favoriteReference string) error {
+func (s *MySQLStorage) RemoveFavoriteByReference(ctx context.Context, favoriteReference string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	query := `DELETE FROM favorites WHERE reference = ?`
-	result, err := s.db.Exec(query, favoriteReference)
+	result, err := s.db.ExecContext(ctx, query, favoriteReference)
 	if err != nil {
 		return fmt.Errorf("failed to delete favorite: %w", err)
 	}
@@ -728,13 +789,18 @@ func (s *MySQLStorage) RemoveFavoriteByReference(favoriteReference string) error
 // GetFavorites returns all favorites for a user in a specific list
 // userID parameter is actually the user reference (e.g., "user1")
 // listReference is the list reference (e.g., "list_user1_default")
-func (s *MySQLStorage) GetFavorites(userReference, listReference string) ([]*models.Favorite, error) {
+func (s *MySQLStorage) GetFavorites(ctx context.Context, userReference, listReference string) ([]*models.Favorite, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userReference, "default")
+		list, err := s.GetListByName(ctx, userReference, "default")
 		if err != nil {
 			// Create default list if it doesn't exist
-			list, err = s.CreateList(userReference, "default")
+			list, err = s.CreateList(ctx, userReference, "default")
 			if err != nil {
 				return nil, err
 			}
@@ -743,13 +809,13 @@ func (s *MySQLStorage) GetFavorites(userReference, listReference string) ([]*mod
 	}
 
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get internal list ID from reference
-	internalListID, err := s.getListIDFromReference(listReference)
+	internalListID, err := s.getListIDFromReference(ctx, listReference)
 	if err != nil {
 		return nil, err
 	}
@@ -763,7 +829,7 @@ func (s *MySQLStorage) GetFavorites(userReference, listReference string) ([]*mod
 		WHERE f.user_id = ? AND f.list_id = ?
 		ORDER BY f.sort_order ASC, f.added_at DESC`
 
-	rows, err := s.db.Query(query, internalUserID, internalListID)
+	rows, err := s.db.QueryContext(ctx, query, internalUserID, internalListID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query favorites: %w", err)
 	}
@@ -771,6 +837,11 @@ func (s *MySQLStorage) GetFavorites(userReference, listReference string) ([]*mod
 
 	var favorites []*models.Favorite
 	for rows.Next() {
+		// Check context during iteration
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		var fav models.Favorite
 		var internalUserID, internalAssetID, internalListID int
 		var assetReference, assetType, assetData, assetDescription string
@@ -832,7 +903,12 @@ func (s *MySQLStorage) GetFavorites(userReference, listReference string) ([]*mod
 }
 
 // GetFavoritesPaginated returns paginated favorites for a user in a specific list
-func (s *MySQLStorage) GetFavoritesPaginated(userReference, listReference string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+func (s *MySQLStorage) GetFavoritesPaginated(ctx context.Context, userReference, listReference string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -845,10 +921,10 @@ func (s *MySQLStorage) GetFavoritesPaginated(userReference, listReference string
 
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userReference, "default")
+		list, err := s.GetListByName(ctx, userReference, "default")
 		if err != nil {
 			// Create default list if it doesn't exist
-			list, err = s.CreateList(userReference, "default")
+			list, err = s.CreateList(ctx, userReference, "default")
 			if err != nil {
 				return nil, 0, err
 			}
@@ -857,13 +933,13 @@ func (s *MySQLStorage) GetFavoritesPaginated(userReference, listReference string
 	}
 
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// Get internal list ID from reference
-	internalListID, err := s.getListIDFromReference(listReference)
+	internalListID, err := s.getListIDFromReference(ctx, listReference)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -890,7 +966,7 @@ func (s *MySQLStorage) GetFavoritesPaginated(userReference, listReference string
 	// Get total count with filters
 	var totalCount int
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM favorites f INNER JOIN assets a ON f.asset_id = a.id WHERE %s`, whereClause)
-	err = s.db.QueryRow(countQuery, args...).Scan(&totalCount)
+	err = s.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count favorites: %w", err)
 	}
@@ -909,7 +985,7 @@ func (s *MySQLStorage) GetFavoritesPaginated(userReference, listReference string
 		LIMIT ? OFFSET ?`, whereClause)
 
 	queryArgs := append(args, pageSize, offset)
-	rows, err := s.db.Query(query, queryArgs...)
+	rows, err := s.db.QueryContext(ctx, query, queryArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query favorites: %w", err)
 	}
@@ -917,6 +993,11 @@ func (s *MySQLStorage) GetFavoritesPaginated(userReference, listReference string
 
 	var favorites []*models.Favorite
 	for rows.Next() {
+		// Check context during iteration
+		if err := ctx.Err(); err != nil {
+			return nil, 0, err
+		}
+
 		var fav models.Favorite
 		var internalUserID, internalAssetID, internalListID int
 		var assetReference, assetType, assetData, assetDescription string
@@ -972,9 +1053,14 @@ func (s *MySQLStorage) GetFavoritesPaginated(userReference, listReference string
 }
 
 // GetAllFavorites returns all favorites for a user across all lists
-func (s *MySQLStorage) GetAllFavorites(userReference string) ([]*models.Favorite, error) {
+func (s *MySQLStorage) GetAllFavorites(ctx context.Context, userReference string) ([]*models.Favorite, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, err
 	}
@@ -988,7 +1074,7 @@ func (s *MySQLStorage) GetAllFavorites(userReference string) ([]*models.Favorite
 		WHERE f.user_id = ?
 		ORDER BY f.list_id ASC, f.sort_order ASC, f.added_at DESC`
 
-	rows, err := s.db.Query(query, internalUserID)
+	rows, err := s.db.QueryContext(ctx, query, internalUserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query favorites: %w", err)
 	}
@@ -996,6 +1082,11 @@ func (s *MySQLStorage) GetAllFavorites(userReference string) ([]*models.Favorite
 
 	var favorites []*models.Favorite
 	for rows.Next() {
+		// Check context during iteration
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		var fav models.Favorite
 		var internalUserID, internalAssetID, internalListID int
 		var assetReference, assetType, assetData, assetDescription string
@@ -1047,7 +1138,12 @@ func (s *MySQLStorage) GetAllFavorites(userReference string) ([]*models.Favorite
 }
 
 // GetAllFavoritesPaginated returns paginated favorites for a user across all lists
-func (s *MySQLStorage) GetAllFavoritesPaginated(userReference string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+func (s *MySQLStorage) GetAllFavoritesPaginated(ctx context.Context, userReference string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -1059,7 +1155,7 @@ func (s *MySQLStorage) GetAllFavoritesPaginated(userReference string, page, page
 	}
 
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1086,7 +1182,7 @@ func (s *MySQLStorage) GetAllFavoritesPaginated(userReference string, page, page
 	// Get total count with filters
 	var totalCount int
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM favorites f INNER JOIN assets a ON f.asset_id = a.id WHERE %s`, whereClause)
-	err = s.db.QueryRow(countQuery, args...).Scan(&totalCount)
+	err = s.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count favorites: %w", err)
 	}
@@ -1105,7 +1201,7 @@ func (s *MySQLStorage) GetAllFavoritesPaginated(userReference string, page, page
 		LIMIT ? OFFSET ?`, whereClause)
 
 	queryArgs := append(args, pageSize, offset)
-	rows, err := s.db.Query(query, queryArgs...)
+	rows, err := s.db.QueryContext(ctx, query, queryArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query favorites: %w", err)
 	}
@@ -1168,7 +1264,12 @@ func (s *MySQLStorage) GetAllFavoritesPaginated(userReference string, page, page
 }
 
 // GetAllListsPaginated returns paginated lists for a user
-func (s *MySQLStorage) GetAllListsPaginated(userReference string, page, pageSize int) ([]*models.List, int, error) {
+func (s *MySQLStorage) GetAllListsPaginated(ctx context.Context, userReference string, page, pageSize int) ([]*models.List, int, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -1180,7 +1281,7 @@ func (s *MySQLStorage) GetAllListsPaginated(userReference string, page, pageSize
 	}
 
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1188,7 +1289,7 @@ func (s *MySQLStorage) GetAllListsPaginated(userReference string, page, pageSize
 	// Get total count
 	var totalCount int
 	countQuery := `SELECT COUNT(*) FROM lists WHERE user_id = ?`
-	err = s.db.QueryRow(countQuery, internalUserID).Scan(&totalCount)
+	err = s.db.QueryRowContext(ctx, countQuery, internalUserID).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count lists: %w", err)
 	}
@@ -1197,7 +1298,7 @@ func (s *MySQLStorage) GetAllListsPaginated(userReference string, page, pageSize
 	offset := (page - 1) * pageSize
 
 	query := `SELECT id, reference, user_id, name, created_at, updated_at FROM lists WHERE user_id = ? ORDER BY name LIMIT ? OFFSET ?`
-	rows, err := s.db.Query(query, internalUserID, pageSize, offset)
+	rows, err := s.db.QueryContext(ctx, query, internalUserID, pageSize, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query lists: %w", err)
 	}
@@ -1205,6 +1306,11 @@ func (s *MySQLStorage) GetAllListsPaginated(userReference string, page, pageSize
 
 	var lists []*models.List
 	for rows.Next() {
+		// Check context during iteration
+		if err := ctx.Err(); err != nil {
+			return nil, 0, err
+		}
+
 		var list models.List
 		var internalUserIDCheck int
 		if err := rows.Scan(&list.ID, &list.Reference, &internalUserIDCheck, &list.Name, &list.CreatedAt, &list.UpdatedAt); err != nil {
@@ -1223,9 +1329,14 @@ func (s *MySQLStorage) GetAllListsPaginated(userReference string, page, pageSize
 
 // UpdateAssetDescription updates the description of an asset
 // assetID parameter is actually the asset reference (e.g., "chart1")
-func (s *MySQLStorage) UpdateAssetDescription(assetReference, description string) error {
+func (s *MySQLStorage) UpdateAssetDescription(ctx context.Context, assetReference, description string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	query := `UPDATE assets SET description = ?, updated_at = ? WHERE reference = ?`
-	result, err := s.db.Exec(query, description, time.Now(), assetReference)
+	result, err := s.db.ExecContext(ctx, query, description, time.Now(), assetReference)
 	if err != nil {
 		return fmt.Errorf("failed to update asset description: %w", err)
 	}
@@ -1243,7 +1354,12 @@ func (s *MySQLStorage) UpdateAssetDescription(assetReference, description string
 }
 
 // CreateAsset creates a new asset
-func (s *MySQLStorage) CreateAsset(userID string, asset models.Asset) (models.Asset, error) {
+func (s *MySQLStorage) CreateAsset(ctx context.Context, userID string, asset models.Asset) (models.Asset, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	if asset == nil {
 		return nil, fmt.Errorf("asset is required")
 	}
@@ -1266,7 +1382,7 @@ func (s *MySQLStorage) CreateAsset(userID string, asset models.Asset) (models.As
 	query := `INSERT INTO assets (reference, type, description, data, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?)`
 
-	_, err = s.db.Exec(query,
+	_, err = s.db.ExecContext(ctx, query,
 		assetReference,
 		string(asset.GetType()),
 		asset.GetDescription(),
@@ -1282,7 +1398,12 @@ func (s *MySQLStorage) CreateAsset(userID string, asset models.Asset) (models.As
 }
 
 // UpdateAsset updates an existing asset
-func (s *MySQLStorage) UpdateAsset(assetReference string, asset models.Asset) (models.Asset, error) {
+func (s *MySQLStorage) UpdateAsset(ctx context.Context, assetReference string, asset models.Asset) (models.Asset, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	if asset == nil {
 		return nil, fmt.Errorf("asset is required")
 	}
@@ -1298,7 +1419,7 @@ func (s *MySQLStorage) UpdateAsset(assetReference string, asset models.Asset) (m
 
 	// Update asset
 	query := `UPDATE assets SET type = ?, description = ?, data = ?, updated_at = ? WHERE reference = ?`
-	result, err := s.db.Exec(query,
+	result, err := s.db.ExecContext(ctx, query,
 		string(asset.GetType()),
 		asset.GetDescription(),
 		assetData,
@@ -1322,10 +1443,15 @@ func (s *MySQLStorage) UpdateAsset(assetReference string, asset models.Asset) (m
 }
 
 // DeleteAsset deletes an asset
-func (s *MySQLStorage) DeleteAsset(assetReference string) error {
+func (s *MySQLStorage) DeleteAsset(ctx context.Context, assetReference string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Check if asset exists
 	var assetID int
-	err := s.db.QueryRow("SELECT id FROM assets WHERE reference = ?", assetReference).Scan(&assetID)
+	err := s.db.QueryRowContext(ctx, "SELECT id FROM assets WHERE reference = ?", assetReference).Scan(&assetID)
 	if err == sql.ErrNoRows {
 		return ErrAssetNotFound
 	}
@@ -1335,7 +1461,7 @@ func (s *MySQLStorage) DeleteAsset(assetReference string) error {
 
 	// Delete asset (CASCADE will delete associated favorites)
 	query := `DELETE FROM assets WHERE reference = ?`
-	result, err := s.db.Exec(query, assetReference)
+	result, err := s.db.ExecContext(ctx, query, assetReference)
 	if err != nil {
 		return fmt.Errorf("failed to delete asset: %w", err)
 	}
@@ -1354,14 +1480,19 @@ func (s *MySQLStorage) DeleteAsset(assetReference string) error {
 
 // GetAsset retrieves an asset by reference
 // assetID parameter is actually the asset reference (e.g., "chart1")
-func (s *MySQLStorage) GetAsset(assetReference string) (models.Asset, error) {
+func (s *MySQLStorage) GetAsset(ctx context.Context, assetReference string) (models.Asset, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	query := `SELECT reference, type, description, data, created_at, updated_at
 		FROM assets WHERE reference = ?`
 
 	var reference, assetType, assetData, description string
 	var createdAt, updatedAt time.Time
 
-	err := s.db.QueryRow(query, assetReference).Scan(&reference, &assetType, &description, &assetData, &createdAt, &updatedAt)
+	err := s.db.QueryRowContext(ctx, query, assetReference).Scan(&reference, &assetType, &description, &assetData, &createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, ErrAssetNotFound
 	}
@@ -1373,7 +1504,12 @@ func (s *MySQLStorage) GetAsset(assetReference string) (models.Asset, error) {
 }
 
 // GetAllAssetsPaginated returns paginated assets
-func (s *MySQLStorage) GetAllAssetsPaginated(page, pageSize int, filters *models.FilterParams) ([]models.Asset, int, error) {
+func (s *MySQLStorage) GetAllAssetsPaginated(ctx context.Context, page, pageSize int, filters *models.FilterParams) ([]models.Asset, int, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -1406,7 +1542,7 @@ func (s *MySQLStorage) GetAllAssetsPaginated(page, pageSize int, filters *models
 	// Get total count with filters
 	var totalCount int
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM assets WHERE %s`, whereClause)
-	err := s.db.QueryRow(countQuery, args...).Scan(&totalCount)
+	err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count assets: %w", err)
 	}
@@ -1422,7 +1558,7 @@ func (s *MySQLStorage) GetAllAssetsPaginated(page, pageSize int, filters *models
 		LIMIT ? OFFSET ?`, whereClause)
 
 	queryArgs := append(args, pageSize, offset)
-	rows, err := s.db.Query(query, queryArgs...)
+	rows, err := s.db.QueryContext(ctx, query, queryArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query assets: %w", err)
 	}
@@ -1430,6 +1566,11 @@ func (s *MySQLStorage) GetAllAssetsPaginated(page, pageSize int, filters *models
 
 	var assets []models.Asset
 	for rows.Next() {
+		// Check context during iteration
+		if err := ctx.Err(); err != nil {
+			return nil, 0, err
+		}
+
 		var reference, assetType, assetData, description string
 		var createdAt, updatedAt time.Time
 
@@ -1456,9 +1597,14 @@ func (s *MySQLStorage) GetAllAssetsPaginated(page, pageSize int, filters *models
 // UpdateFavoriteSortOrder updates the sort order of a favorite
 // userReference is the user reference (e.g., "user1")
 // favoriteReference is the favorite reference (e.g., "fav_user1_favorite1")
-func (s *MySQLStorage) UpdateFavoriteSortOrder(userReference, favoriteReference string, sortOrder int) error {
+func (s *MySQLStorage) UpdateFavoriteSortOrder(ctx context.Context, userReference, favoriteReference string, sortOrder int) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Get internal user ID from reference
-	internalUserID, err := s.getUserIDFromReference(userReference)
+	internalUserID, err := s.getUserIDFromReference(ctx, userReference)
 	if err != nil {
 		return fmt.Errorf("user with reference %s not found", userReference)
 	}
@@ -1466,7 +1612,7 @@ func (s *MySQLStorage) UpdateFavoriteSortOrder(userReference, favoriteReference 
 	// Get favorite ID and list_id from favorite reference
 	var favoriteID, listID int
 	query := `SELECT id, list_id FROM favorites WHERE reference = ? AND user_id = ?`
-	err = s.db.QueryRow(query, favoriteReference, internalUserID).Scan(&favoriteID, &listID)
+	err = s.db.QueryRowContext(ctx, query, favoriteReference, internalUserID).Scan(&favoriteID, &listID)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("favorite with reference %s not found", favoriteReference)
 	}
@@ -1476,7 +1622,7 @@ func (s *MySQLStorage) UpdateFavoriteSortOrder(userReference, favoriteReference 
 
 	// Update sort_order
 	updateQuery := `UPDATE favorites SET sort_order = ?, updated_at = ? WHERE id = ?`
-	result, err := s.db.Exec(updateQuery, sortOrder, time.Now(), favoriteID)
+	result, err := s.db.ExecContext(ctx, updateQuery, sortOrder, time.Now(), favoriteID)
 	if err != nil {
 		return fmt.Errorf("failed to update sort order: %w", err)
 	}

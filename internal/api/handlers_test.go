@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -24,7 +25,7 @@ func TestHandler_GetAllFavorites_Basic(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create default list first
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -38,12 +39,12 @@ func TestHandler_GetAllFavorites_Basic(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
 	// Add a favorite first
-	handler.service.AddFavorite("user1", "user1_favorite1", list.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "user1_favorite1", list.Reference, nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/users/user1/favorites", nil)
 	w := httptest.NewRecorder()
@@ -81,7 +82,7 @@ func TestHandler_AddFavoriteToDefault(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err := handler.service.CreateAsset("user1", chart)
+	_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
@@ -108,7 +109,7 @@ func TestHandler_RemoveFavoriteFromDefault(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create default list first
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -122,12 +123,12 @@ func TestHandler_RemoveFavoriteFromDefault(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
 	// Add a favorite first
-	handler.service.AddFavorite("user1", "user1_favorite1", list.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "user1_favorite1", list.Reference, nil)
 
 	req := httptest.NewRequest("DELETE", "/api/v1/users/user1/favorites/user1_favorite1", nil)
 	w := httptest.NewRecorder()
@@ -145,7 +146,7 @@ func TestHandler_UpdateDescription(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create default list first
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -159,11 +160,11 @@ func TestHandler_UpdateDescription(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	handler.service.AddFavorite("user1", "chart1", list.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "chart1", list.Reference, nil)
 
 	requestBody := map[string]interface{}{
 		"description": "New Description",
@@ -187,11 +188,11 @@ func TestHandler_GetAllFavorites(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create two lists
-	list1, err := handler.service.CreateList("user1", "default")
+	list1, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
-	list2, err := handler.service.CreateList("user1", "work")
+	list2, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -214,16 +215,16 @@ func TestHandler_GetAllFavorites(t *testing.T) {
 		Title: "Chart 2",
 	}
 
-	_, err = handler.service.CreateAsset("user1", chart1)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart1)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	_, err = handler.service.CreateAsset("user1", chart2)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart2)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	handler.service.AddFavorite("user1", "chart1", list1.Reference, nil)
-	handler.service.AddFavorite("user1", "chart2", list2.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "chart1", list1.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "chart2", list2.Reference, nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/users/user1/favorites", nil)
 	w := httptest.NewRecorder()
@@ -250,7 +251,7 @@ func TestHandler_GetAllFavorites_Pagination(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create list
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -265,11 +266,11 @@ func TestHandler_GetAllFavorites_Pagination(t *testing.T) {
 			},
 			Title: fmt.Sprintf("Chart %d", i),
 		}
-		_, err := handler.service.CreateAsset("user1", chart)
+		_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 		if err != nil {
 			t.Fatalf("Failed to create asset: %v", err)
 		}
-		handler.service.AddFavorite("user1", chart.ID, list.Reference, nil)
+		handler.service.AddFavorite(context.Background(),"user1", chart.ID, list.Reference, nil)
 	}
 
 	// Test first page
@@ -345,7 +346,7 @@ func TestHandler_GetFavorites_Pagination(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create list
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -360,11 +361,11 @@ func TestHandler_GetFavorites_Pagination(t *testing.T) {
 			},
 			Title: fmt.Sprintf("Chart %d", i),
 		}
-		_, err := handler.service.CreateAsset("user1", chart)
+		_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 		if err != nil {
 			t.Fatalf("Failed to create asset: %v", err)
 		}
-		handler.service.AddFavorite("user1", chart.ID, list.Reference, nil)
+		handler.service.AddFavorite(context.Background(),"user1", chart.ID, list.Reference, nil)
 	}
 
 	// Test first page
@@ -431,7 +432,7 @@ func TestHandler_GetAllLists_Pagination(t *testing.T) {
 
 	// Create multiple lists
 	for i := 1; i <= 15; i++ {
-		handler.service.CreateList("user1", fmt.Sprintf("list%d", i))
+		handler.service.CreateList(context.Background(),"user1", fmt.Sprintf("list%d", i))
 	}
 
 	// Test pagination
@@ -582,7 +583,7 @@ func TestHandler_GetList(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list first
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -662,7 +663,7 @@ func TestHandler_DeleteList(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list first
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -676,17 +677,17 @@ func TestHandler_DeleteList(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	_, err = handler.service.AddFavorite("user1", "user1_favorite1", list.Reference, nil)
+	_, err = handler.service.AddFavorite(context.Background(), "user1", "user1_favorite1", list.Reference, nil)
 	if err != nil {
 		t.Fatalf("Failed to add favorite: %v", err)
 	}
 
 	// Verify favorite exists
-	favorites, err := handler.service.GetFavorites("user1", list.Reference)
+	favorites, err := handler.service.GetFavorites(context.Background(), "user1", list.Reference)
 	if err != nil {
 		t.Fatalf("Failed to get favorites: %v", err)
 	}
@@ -706,13 +707,13 @@ func TestHandler_DeleteList(t *testing.T) {
 	}
 
 	// Verify list is deleted
-	_, err = handler.service.GetList("user1", list.Reference)
+	_, err = handler.service.GetList(context.Background(), "user1", list.Reference)
 	if err == nil {
 		t.Error("Expected list to be deleted, but it still exists")
 	}
 
 	// Verify favorites are also deleted (should get error or empty result)
-	favorites, err = handler.service.GetFavorites("user1", list.Reference)
+	favorites, err = handler.service.GetFavorites(context.Background(), "user1", list.Reference)
 	if err == nil && len(favorites) > 0 {
 		t.Errorf("Expected favorites to be deleted with the list, but found %d favorites", len(favorites))
 	}
@@ -737,7 +738,7 @@ func TestHandler_AddFavorite(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list first
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -751,7 +752,7 @@ func TestHandler_AddFavorite(t *testing.T) {
 		},
 		Title: "Q4 Metrics",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
@@ -779,7 +780,7 @@ func TestHandler_AddFavorite_InvalidJSON(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list first
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -801,7 +802,7 @@ func TestHandler_AddFavorite_MissingAssetReference(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list first
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -849,7 +850,7 @@ func TestHandler_RemoveFavorite(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list first
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -863,12 +864,12 @@ func TestHandler_RemoveFavorite(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
 	// Add a favorite first
-	handler.service.AddFavorite("user1", "user1_favorite1", list.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "user1_favorite1", list.Reference, nil)
 
 	req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/users/user1/lists/%s/favorites/user1_favorite1", list.Reference), nil)
 	w := httptest.NewRecorder()
@@ -886,7 +887,7 @@ func TestHandler_RemoveFavorite_NotFound(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list first
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -922,7 +923,7 @@ func TestHandler_RemoveFavorite_EmptyAssetID(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list first
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -1071,7 +1072,7 @@ func TestHandler_UpdateSortOrder(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create default list first
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -1085,11 +1086,11 @@ func TestHandler_UpdateSortOrder(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	fav, err := handler.service.AddFavorite("user1", chart.ID, list.Reference, nil)
+	fav, err := handler.service.AddFavorite(context.Background(), "user1", chart.ID, list.Reference, nil)
 	if err != nil {
 		t.Fatalf("Failed to add favorite: %v", err)
 	}
@@ -1113,7 +1114,7 @@ func TestHandler_UpdateSortOrder(t *testing.T) {
 	}
 
 	// Verify the sort order was updated
-	favorites, err := handler.service.GetFavorites("user1", list.Reference)
+	favorites, err := handler.service.GetFavorites(context.Background(), "user1", list.Reference)
 	if err != nil {
 		t.Fatalf("Failed to get favorites: %v", err)
 	}
@@ -1147,7 +1148,7 @@ func TestHandler_UpdateSortOrder_NegativeSortOrder(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create default list first
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -1161,11 +1162,11 @@ func TestHandler_UpdateSortOrder_NegativeSortOrder(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	fav, err := handler.service.AddFavorite("user1", chart.ID, list.Reference, nil)
+	fav, err := handler.service.AddFavorite(context.Background(), "user1", chart.ID, list.Reference, nil)
 	if err != nil {
 		t.Fatalf("Failed to add favorite: %v", err)
 	}
@@ -1213,7 +1214,7 @@ func TestHandler_GetFavorites_EmptyList(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create a list but don't add any favorites
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -1334,7 +1335,7 @@ func TestHandler_Pagination_BoundaryConditions(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create list
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -1349,11 +1350,11 @@ func TestHandler_Pagination_BoundaryConditions(t *testing.T) {
 			},
 			Title: fmt.Sprintf("Chart %d", i),
 		}
-		_, err := handler.service.CreateAsset("user1", chart)
+		_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 		if err != nil {
 			t.Fatalf("Failed to create asset: %v", err)
 		}
-		handler.service.AddFavorite("user1", chart.ID, list.Reference, nil)
+		handler.service.AddFavorite(context.Background(),"user1", chart.ID, list.Reference, nil)
 	}
 
 	// Test page beyond total pages
@@ -1438,7 +1439,7 @@ func TestHandler_GetFavorites_WithFilters(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create list
-	list, err := handler.service.CreateList("user1", "default")
+	list, err := handler.service.CreateList(context.Background(), "user1", "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -1452,11 +1453,11 @@ func TestHandler_GetFavorites_WithFilters(t *testing.T) {
 		},
 		Title: "Chart 1",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	handler.service.AddFavorite("user1", "chart1", list.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "chart1", list.Reference, nil)
 
 	insight := &models.Insight{
 		BaseAsset: models.BaseAsset{
@@ -1466,11 +1467,11 @@ func TestHandler_GetFavorites_WithFilters(t *testing.T) {
 		},
 		Text: "Test insight",
 	}
-	_, err = handler.service.CreateAsset("user1", insight)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", insight)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	handler.service.AddFavorite("user1", "insight1", list.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "insight1", list.Reference, nil)
 
 	// Test filter by asset type
 	req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/users/user1/lists/%s/favorites?asset_type=chart", list.Reference), nil)
@@ -1499,11 +1500,11 @@ func TestHandler_GetAllFavorites_WithFilters(t *testing.T) {
 	handler := setupTestHandler()
 
 	// Create lists
-	list1, err := handler.service.CreateList("user1", "list1")
+	list1, err := handler.service.CreateList(context.Background(), "user1", "list1")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
-	list2, err := handler.service.CreateList("user1", "list2")
+	list2, err := handler.service.CreateList(context.Background(), "user1", "list2")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -1517,11 +1518,11 @@ func TestHandler_GetAllFavorites_WithFilters(t *testing.T) {
 		},
 		Title: "Chart 1",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	handler.service.AddFavorite("user1", "chart1", list1.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "chart1", list1.Reference, nil)
 
 	insight := &models.Insight{
 		BaseAsset: models.BaseAsset{
@@ -1531,11 +1532,11 @@ func TestHandler_GetAllFavorites_WithFilters(t *testing.T) {
 		},
 		Text: "Test insight",
 	}
-	_, err = handler.service.CreateAsset("user1", insight)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", insight)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	handler.service.AddFavorite("user1", "insight1", list2.Reference, nil)
+	handler.service.AddFavorite(context.Background(),"user1", "insight1", list2.Reference, nil)
 
 	// Test filter by asset type
 	req := httptest.NewRequest("GET", "/api/v1/users/user1/favorites?asset_type=chart", nil)
@@ -1617,7 +1618,7 @@ func TestHandler_GetAsset(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err := handler.service.CreateAsset("user1", chart)
+	_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
@@ -1672,15 +1673,15 @@ func TestHandler_GetAllAssets(t *testing.T) {
 		Text: "Some insight text",
 	}
 
-	_, err := handler.service.CreateAsset("user1", chart1)
+	_, err := handler.service.CreateAsset(context.Background(), "user1", chart1)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	_, err = handler.service.CreateAsset("user1", chart2)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart2)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	_, err = handler.service.CreateAsset("user2", insight1)
+	_, err = handler.service.CreateAsset(context.Background(), "user2", insight1)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
@@ -1726,7 +1727,7 @@ func TestHandler_GetAllAssets_Pagination(t *testing.T) {
 			},
 			Title: fmt.Sprintf("Sales Chart %d", i),
 		}
-		_, err := handler.service.CreateAsset("user1", chart)
+		_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 		if err != nil {
 			t.Fatalf("Failed to create asset: %v", err)
 		}
@@ -1787,11 +1788,11 @@ func TestHandler_GetAllAssets_WithFilters(t *testing.T) {
 		Text: "Some insight",
 	}
 
-	_, err := handler.service.CreateAsset("user1", chart)
+	_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	_, err = handler.service.CreateAsset("user1", insight)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", insight)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
@@ -1830,7 +1831,7 @@ func TestHandler_UpdateAsset(t *testing.T) {
 		},
 		Title: "Original Title",
 	}
-	_, err := handler.service.CreateAsset("user1", chart)
+	_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
@@ -1882,7 +1883,7 @@ func TestHandler_DeleteAsset(t *testing.T) {
 		},
 		Title: "Sales Chart",
 	}
-	_, err := handler.service.CreateAsset("user1", chart)
+	_, err := handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
@@ -1898,7 +1899,7 @@ func TestHandler_DeleteAsset(t *testing.T) {
 		t.Errorf("Expected status 200, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
-	_, err = handler.service.GetAsset("user1_favorite1")
+	_, err = handler.service.GetAsset(context.Background(), "user1_favorite1")
 	if err == nil {
 		t.Error("Expected asset to be deleted")
 	}
@@ -1907,7 +1908,7 @@ func TestHandler_DeleteAsset(t *testing.T) {
 func TestHandler_AddFavorite_WithAssetReference(t *testing.T) {
 	handler := setupTestHandler()
 
-	list, err := handler.service.CreateList("user1", "work")
+	list, err := handler.service.CreateList(context.Background(), "user1", "work")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -1920,7 +1921,7 @@ func TestHandler_AddFavorite_WithAssetReference(t *testing.T) {
 		},
 		Title: "Q4 Metrics",
 	}
-	_, err = handler.service.CreateAsset("user1", chart)
+	_, err = handler.service.CreateAsset(context.Background(), "user1", chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}

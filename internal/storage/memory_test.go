@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -13,7 +14,7 @@ func TestMemoryStorage_GetFavoritesPaginated_WithFilters(t *testing.T) {
 	userID := "user1"
 
 	// Create default list first
-	list, err := storage.CreateList(userID, "default")
+	list, err := storage.CreateList(context.Background(), userID, "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -29,11 +30,11 @@ func TestMemoryStorage_GetFavoritesPaginated_WithFilters(t *testing.T) {
 		},
 		Title: "Chart 1",
 	}
-	_, err = storage.CreateAsset(userID, chart)
+	_, err = storage.CreateAsset(context.Background(), userID, chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, chart.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, chart.GetID(), list.Reference, nil)
 
 	insight := &models.Insight{
 		BaseAsset: models.BaseAsset{
@@ -45,11 +46,11 @@ func TestMemoryStorage_GetFavoritesPaginated_WithFilters(t *testing.T) {
 		},
 		Text: "Test insight",
 	}
-	_, err = storage.CreateAsset(userID, insight)
+	_, err = storage.CreateAsset(context.Background(), userID, insight)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, insight.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, insight.GetID(), list.Reference, nil)
 
 	audience := &models.Audience{
 		BaseAsset: models.BaseAsset{
@@ -60,16 +61,16 @@ func TestMemoryStorage_GetFavoritesPaginated_WithFilters(t *testing.T) {
 			UpdatedAt:   time.Now(),
 		},
 	}
-	_, err = storage.CreateAsset(userID, audience)
+	_, err = storage.CreateAsset(context.Background(), userID, audience)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, audience.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, audience.GetID(), list.Reference, nil)
 
 	// Filter by chart type
 	chartType := models.AssetTypeChart
 	filters := &models.FilterParams{AssetType: &chartType}
-	favorites, totalCount, err := storage.GetFavoritesPaginated(userID, list.Reference, 1, 10, filters)
+	favorites, totalCount, err := storage.GetFavoritesPaginated(context.Background(), userID, list.Reference, 1, 10, filters)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -86,7 +87,7 @@ func TestMemoryStorage_GetFavoritesPaginated_WithFilters(t *testing.T) {
 	// Filter by insight type
 	insightType := models.AssetTypeInsight
 	filters = &models.FilterParams{AssetType: &insightType}
-	favorites, totalCount, err = storage.GetFavoritesPaginated(userID, list.Reference, 1, 10, filters)
+	favorites, totalCount, err = storage.GetFavoritesPaginated(context.Background(), userID, list.Reference, 1, 10, filters)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -104,8 +105,8 @@ func TestMemoryStorage_GetAllFavoritesPaginated_WithFilters(t *testing.T) {
 	userID := "user1"
 
 	// Create lists
-	list1, _ := storage.CreateList(userID, "list1")
-	list2, _ := storage.CreateList(userID, "list2")
+	list1, _ := storage.CreateList(context.Background(), userID, "list1")
+	list2, _ := storage.CreateList(context.Background(), userID, "list2")
 
 	// Add different asset types to different lists
 	chart := &models.Chart{
@@ -118,11 +119,11 @@ func TestMemoryStorage_GetAllFavoritesPaginated_WithFilters(t *testing.T) {
 		},
 		Title: "Chart 1",
 	}
-	_, err := storage.CreateAsset(userID, chart)
+	_, err := storage.CreateAsset(context.Background(), userID, chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, chart.GetID(), list1.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, chart.GetID(), list1.Reference, nil)
 
 	insight := &models.Insight{
 		BaseAsset: models.BaseAsset{
@@ -134,16 +135,16 @@ func TestMemoryStorage_GetAllFavoritesPaginated_WithFilters(t *testing.T) {
 		},
 		Text: "Test insight",
 	}
-	_, err = storage.CreateAsset(userID, insight)
+	_, err = storage.CreateAsset(context.Background(), userID, insight)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, insight.GetID(), list2.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, insight.GetID(), list2.Reference, nil)
 
 	// Filter by chart type across all lists
 	chartType := models.AssetTypeChart
 	filters := &models.FilterParams{AssetType: &chartType}
-	favorites, totalCount, err := storage.GetAllFavoritesPaginated(userID, 1, 10, filters)
+	favorites, totalCount, err := storage.GetAllFavoritesPaginated(context.Background(), userID, 1, 10, filters)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

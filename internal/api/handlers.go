@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gwi/platform-go-challenge/internal/errors"
 	"github.com/gwi/platform-go-challenge/internal/models"
 	"github.com/gwi/platform-go-challenge/internal/service"
 )
@@ -67,9 +68,10 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 // GetAllLists retrieves all favorites lists for a user (with pagination)
 func (h *Handler) GetAllLists(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
@@ -77,9 +79,9 @@ func (h *Handler) GetAllLists(w http.ResponseWriter, r *http.Request) {
 	page := parseIntQueryParam(r, "page", 1)
 	pageSize := parseIntQueryParam(r, "page_size", 20)
 
-	lists, totalCount, err := h.service.GetAllListsPaginated(userID, page, pageSize)
+	lists, totalCount, err := h.service.GetAllListsPaginated(ctx, userID, page, pageSize)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		HandleError(w, r, err)
 		return
 	}
 
@@ -101,9 +103,10 @@ func (h *Handler) GetAllLists(w http.ResponseWriter, r *http.Request) {
 
 // CreateList creates a new list for a user
 func (h *Handler) CreateList(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
@@ -111,18 +114,18 @@ func (h *Handler) CreateList(w http.ResponseWriter, r *http.Request) {
 		Name string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	if req.Name == "" {
-		respondWithError(w, http.StatusBadRequest, "list name is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "list name is required")
 		return
 	}
 
-	list, err := h.service.CreateList(userID, req.Name)
+	list, err := h.service.CreateList(ctx, userID, req.Name)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		HandleError(w, r, err)
 		return
 	}
 
@@ -131,20 +134,21 @@ func (h *Handler) CreateList(w http.ResponseWriter, r *http.Request) {
 
 // GetList retrieves a list by reference
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	listReference := chi.URLParam(r, "listReference")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 	if listReference == "" {
-		respondWithError(w, http.StatusBadRequest, "list reference is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "list reference is required")
 		return
 	}
 
-	list, err := h.service.GetList(userID, listReference)
+	list, err := h.service.GetList(ctx, userID, listReference)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, err.Error())
+		HandleError(w, r, err)
 		return
 	}
 
@@ -153,19 +157,20 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 
 // DeleteList deletes a list and all its favorites
 func (h *Handler) DeleteList(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	listReference := chi.URLParam(r, "listReference")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 	if listReference == "" {
-		respondWithError(w, http.StatusBadRequest, "list reference is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "list reference is required")
 		return
 	}
 
-	if err := h.service.DeleteList(userID, listReference); err != nil {
-		respondWithError(w, http.StatusNotFound, err.Error())
+	if err := h.service.DeleteList(ctx, userID, listReference); err != nil {
+		HandleError(w, r, err)
 		return
 	}
 
@@ -176,10 +181,11 @@ func (h *Handler) DeleteList(w http.ResponseWriter, r *http.Request) {
 
 // GetFavorites retrieves paginated favorites for a user in a specific list
 func (h *Handler) GetFavorites(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	listReference := chi.URLParam(r, "listReference")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
@@ -190,9 +196,9 @@ func (h *Handler) GetFavorites(w http.ResponseWriter, r *http.Request) {
 	// Parse filter parameters
 	filters := parseFilterParams(r)
 
-	favorites, totalCount, err := h.service.GetFavoritesPaginated(userID, listReference, page, pageSize, filters)
+	favorites, totalCount, err := h.service.GetFavoritesPaginated(ctx, userID, listReference, page, pageSize, filters)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -214,9 +220,10 @@ func (h *Handler) GetFavorites(w http.ResponseWriter, r *http.Request) {
 
 // GetAllFavorites retrieves all favorites for a user across all lists (with pagination)
 func (h *Handler) GetAllFavorites(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
@@ -227,9 +234,9 @@ func (h *Handler) GetAllFavorites(w http.ResponseWriter, r *http.Request) {
 	// Parse filter parameters
 	filters := parseFilterParams(r)
 
-	favorites, totalCount, err := h.service.GetAllFavoritesPaginated(userID, page, pageSize, filters)
+	favorites, totalCount, err := h.service.GetAllFavoritesPaginated(ctx, userID, page, pageSize, filters)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -251,23 +258,24 @@ func (h *Handler) GetAllFavorites(w http.ResponseWriter, r *http.Request) {
 
 // CreateAsset creates a new asset
 func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var req models.CreateAssetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	// Get userID from request body
 	userID := req.UserID
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user_id is required in request body")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user_id is required in request body")
 		return
 	}
 
 	// Parse asset from JSON
 	var assetData map[string]interface{}
 	if err := json.Unmarshal(req.Asset, &assetData); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid asset data: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid asset data: %v", err))
 		return
 	}
 
@@ -275,9 +283,9 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 	delete(assetData, "id")
 
 	// Generate next sequential asset ID for the user
-	assetID, err := h.service.GenerateNextAssetID(userID)
+	assetID, err := h.service.GenerateNextAssetID(ctx, userID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("failed to generate asset ID: %v", err))
+		respondWithErrorLegacy(w, http.StatusInternalServerError, fmt.Sprintf("failed to generate asset ID: %v", err))
 		return
 	}
 
@@ -287,14 +295,14 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 	// Create asset using service
 	asset, err := h.service.CreateAssetFromJSON(assetData)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("failed to create asset: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("failed to create asset: %v", err))
 		return
 	}
 
 	// Create asset in storage
-	createdAsset, err := h.service.CreateAsset(userID, asset)
+	createdAsset, err := h.service.CreateAsset(ctx, userID, asset)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		HandleError(w, r, err)
 		return
 	}
 
@@ -303,6 +311,7 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 
 // GetAllAssets retrieves all assets with pagination and optional filters
 func (h *Handler) GetAllAssets(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	// Parse pagination parameters
 	page := parseIntQueryParam(r, "page", 1)
 	pageSize := parseIntQueryParam(r, "page_size", 20)
@@ -310,9 +319,9 @@ func (h *Handler) GetAllAssets(w http.ResponseWriter, r *http.Request) {
 	// Parse filter parameters
 	filters := parseFilterParams(r)
 
-	assets, totalCount, err := h.service.GetAllAssetsPaginated(page, pageSize, filters)
+	assets, totalCount, err := h.service.GetAllAssetsPaginated(ctx, page, pageSize, filters)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -334,19 +343,16 @@ func (h *Handler) GetAllAssets(w http.ResponseWriter, r *http.Request) {
 
 // GetAsset retrieves an asset by reference
 func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	assetReference := chi.URLParam(r, "assetReference")
 	if assetReference == "" {
-		respondWithError(w, http.StatusBadRequest, "asset reference is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "asset reference is required")
 		return
 	}
 
-	asset, err := h.service.GetAsset(assetReference)
+	asset, err := h.service.GetAsset(ctx, assetReference)
 	if err != nil {
-		if err.Error() == "asset not found" {
-			respondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		HandleError(w, r, err)
 		return
 	}
 
@@ -355,22 +361,23 @@ func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) {
 
 // UpdateAsset updates an existing asset
 func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	assetReference := chi.URLParam(r, "assetReference")
 	if assetReference == "" {
-		respondWithError(w, http.StatusBadRequest, "asset reference is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "asset reference is required")
 		return
 	}
 
 	var req models.UpdateAssetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	// Parse asset from JSON
 	var assetData map[string]interface{}
 	if err := json.Unmarshal(req.Asset, &assetData); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid asset data: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid asset data: %v", err))
 		return
 	}
 
@@ -380,18 +387,18 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 	// Create asset using service
 	asset, err := h.service.CreateAssetFromJSON(assetData)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("failed to parse asset: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("failed to parse asset: %v", err))
 		return
 	}
 
 	// Update asset in storage
-	updatedAsset, err := h.service.UpdateAsset(assetReference, asset)
+	updatedAsset, err := h.service.UpdateAsset(ctx, assetReference, asset)
 	if err != nil {
 		if err.Error() == "asset not found" {
-			respondWithError(w, http.StatusNotFound, err.Error())
+			respondWithErrorLegacy(w, http.StatusNotFound, err.Error())
 			return
 		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -400,18 +407,19 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 
 // DeleteAsset deletes an asset
 func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	assetReference := chi.URLParam(r, "assetReference")
 	if assetReference == "" {
-		respondWithError(w, http.StatusBadRequest, "asset reference is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "asset reference is required")
 		return
 	}
 
-	if err := h.service.DeleteAsset(assetReference); err != nil {
+	if err := h.service.DeleteAsset(ctx, assetReference); err != nil {
 		if err.Error() == "asset not found" {
-			respondWithError(w, http.StatusNotFound, err.Error())
+			respondWithErrorLegacy(w, http.StatusNotFound, err.Error())
 			return
 		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -422,21 +430,22 @@ func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 
 // AddFavorite adds an asset to a user's favorites in a specific list
 func (h *Handler) AddFavorite(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	listReference := chi.URLParam(r, "listReference")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
 	var req models.AddFavoriteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	if req.AssetReference == "" {
-		respondWithError(w, http.StatusBadRequest, "asset_reference is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "asset_reference is required")
 		return
 	}
 
@@ -448,13 +457,13 @@ func (h *Handler) AddFavorite(w http.ResponseWriter, r *http.Request) {
 		// If still empty, will default to "default" in service layer
 	}
 
-	favorite, err := h.service.AddFavorite(userID, req.AssetReference, listReference, req.SortOrder)
+	favorite, err := h.service.AddFavorite(ctx, userID, req.AssetReference, listReference, req.SortOrder)
 	if err != nil {
 		if err.Error() == "asset with reference "+req.AssetReference+" not found" || err.Error() == "asset not found" {
-			respondWithError(w, http.StatusNotFound, "asset not found")
+			respondWithErrorLegacy(w, http.StatusNotFound, "asset not found")
 			return
 		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -463,31 +472,32 @@ func (h *Handler) AddFavorite(w http.ResponseWriter, r *http.Request) {
 
 // AddFavoriteToDefault adds an asset to a user's favorites in the default list
 func (h *Handler) AddFavoriteToDefault(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
 	var req models.AddFavoriteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	if req.AssetReference == "" {
-		respondWithError(w, http.StatusBadRequest, "asset_reference is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "asset_reference is required")
 		return
 	}
 
 	// Use listReference from request if provided, otherwise will default to "default" in service layer
-	favorite, err := h.service.AddFavorite(userID, req.AssetReference, req.ListReference, req.SortOrder)
+	favorite, err := h.service.AddFavorite(ctx, userID, req.AssetReference, req.ListReference, req.SortOrder)
 	if err != nil {
 		if err.Error() == "asset with reference "+req.AssetReference+" not found" || err.Error() == "asset not found" {
-			respondWithError(w, http.StatusNotFound, "asset not found")
+			respondWithErrorLegacy(w, http.StatusNotFound, "asset not found")
 			return
 		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -496,36 +506,37 @@ func (h *Handler) AddFavoriteToDefault(w http.ResponseWriter, r *http.Request) {
 
 // RemoveFavorite removes an asset from a user's favorites in a specific list
 func (h *Handler) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	listReference := chi.URLParam(r, "listReference")
 	assetID := chi.URLParam(r, "assetID")
 
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
 	if assetID == "" {
-		respondWithError(w, http.StatusBadRequest, "asset ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "asset ID is required")
 		return
 	}
 
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := h.service.GetListByName(userID, "default")
+		list, err := h.service.GetListByName(ctx, userID, "default")
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "default list not found")
+			respondWithErrorLegacy(w, http.StatusNotFound, "default list not found")
 			return
 		}
 		listReference = list.Reference
 	}
 
-	if err := h.service.RemoveFavorite(userID, assetID, listReference); err != nil {
+	if err := h.service.RemoveFavorite(ctx, userID, assetID, listReference); err != nil {
 		if err.Error() == "favorite not found" {
-			respondWithError(w, http.StatusNotFound, err.Error())
+			respondWithErrorLegacy(w, http.StatusNotFound, err.Error())
 			return
 		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -536,32 +547,33 @@ func (h *Handler) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
 
 // RemoveFavoriteFromDefault removes an asset from a user's favorites in the default list
 func (h *Handler) RemoveFavoriteFromDefault(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	assetID := chi.URLParam(r, "assetID")
 
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
 	if assetID == "" {
-		respondWithError(w, http.StatusBadRequest, "asset ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "asset ID is required")
 		return
 	}
 
 	// Get default list
-	list, err := h.service.GetListByName(userID, "default")
+	list, err := h.service.GetListByName(ctx, userID, "default")
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "default list not found")
+		respondWithErrorLegacy(w, http.StatusNotFound, "default list not found")
 		return
 	}
 
-	if err := h.service.RemoveFavorite(userID, assetID, list.Reference); err != nil {
+	if err := h.service.RemoveFavorite(ctx, userID, assetID, list.Reference); err != nil {
 		if err.Error() == "favorite not found" {
-			respondWithError(w, http.StatusNotFound, err.Error())
+			respondWithErrorLegacy(w, http.StatusNotFound, err.Error())
 			return
 		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -572,28 +584,29 @@ func (h *Handler) RemoveFavoriteFromDefault(w http.ResponseWriter, r *http.Reque
 
 // UpdateDescription updates the description of an asset
 func (h *Handler) UpdateDescription(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	assetID := chi.URLParam(r, "assetID")
 	if assetID == "" {
-		respondWithError(w, http.StatusBadRequest, "asset ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "asset ID is required")
 		return
 	}
 
 	var req models.UpdateDescriptionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
-	if err := h.service.UpdateDescription(assetID, req.Description); err != nil {
+	if err := h.service.UpdateDescription(ctx, assetID, req.Description); err != nil {
 		if err.Error() == "asset not found" {
-			respondWithError(w, http.StatusNotFound, err.Error())
+			respondWithErrorLegacy(w, http.StatusNotFound, err.Error())
 			return
 		}
 		if err.Error() == "description cannot be empty" {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithErrorLegacy(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -604,35 +617,36 @@ func (h *Handler) UpdateDescription(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSortOrder updates the sort order of a favorite
 func (h *Handler) UpdateSortOrder(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
 	if userID == "" {
-		respondWithError(w, http.StatusBadRequest, "user ID is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "user ID is required")
 		return
 	}
 
 	favoriteReference := chi.URLParam(r, "favoriteReference")
 	if favoriteReference == "" {
-		respondWithError(w, http.StatusBadRequest, "favorite reference is required")
+		respondWithErrorLegacy(w, http.StatusBadRequest, "favorite reference is required")
 		return
 	}
 
 	var req models.UpdateSortOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
+		respondWithErrorLegacy(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
-	if err := h.service.UpdateFavoriteSortOrder(userID, favoriteReference, req.SortOrder); err != nil {
+	if err := h.service.UpdateFavoriteSortOrder(ctx, userID, favoriteReference, req.SortOrder); err != nil {
 		if err.Error() == fmt.Sprintf("favorite with reference %s not found", favoriteReference) || 
 		   err.Error() == "favorite not found" {
-			respondWithError(w, http.StatusNotFound, err.Error())
+			respondWithErrorLegacy(w, http.StatusNotFound, err.Error())
 			return
 		}
 		if err.Error() == "sort order must be non-negative" {
-			respondWithError(w, http.StatusBadRequest, err.Error())
+			respondWithErrorLegacy(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithErrorLegacy(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -657,9 +671,29 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	json.NewEncoder(w).Encode(payload)
 }
 
-// respondWithError sends an error JSON response
-func respondWithError(w http.ResponseWriter, code int, message string) {
-	respondWithJSON(w, code, map[string]string{"error": message})
+// respondWithErrorLegacy is a helper for handler-level validation errors
+// For service errors, use HandleError instead
+func respondWithErrorLegacy(w http.ResponseWriter, code int, message string) {
+	var errorCode errors.ErrorCode
+	switch code {
+	case http.StatusBadRequest:
+		errorCode = errors.ErrorCodeValidation
+	case http.StatusNotFound:
+		errorCode = errors.ErrorCodeNotFound
+	case http.StatusConflict:
+		errorCode = errors.ErrorCodeConflict
+	case http.StatusInternalServerError:
+		errorCode = errors.ErrorCodeInternal
+	default:
+		errorCode = errors.ErrorCodeInternal
+	}
+	
+	appErr := &errors.AppError{
+		Code:       errorCode,
+		Message:    message,
+		HTTPStatus: code,
+	}
+	HandleError(w, nil, appErr)
 }
 
 // parseIntQueryParam parses an integer query parameter with a default value

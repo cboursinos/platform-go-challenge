@@ -214,8 +214,19 @@ func TestRecoverMiddleware(t *testing.T) {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
 
-	if response["error"] != "internal server error" {
-		t.Errorf("Expected error message, got %v", response["error"])
+	// New error handling returns error code and message
+	errorCode, ok := response["error"].(string)
+	if !ok {
+		t.Errorf("Expected error code in response, got %v", response["error"])
+	}
+	if errorCode != "INTERNAL_ERROR" {
+		t.Errorf("Expected error code INTERNAL_ERROR, got %v", errorCode)
+	}
+	
+	// Check that message exists
+	message, ok := response["message"].(string)
+	if !ok || message == "" {
+		t.Errorf("Expected error message in response, got %v", response["message"])
 	}
 }
 

@@ -1,10 +1,14 @@
 package service
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/gwi/platform-go-challenge/internal/errors"
 	"github.com/gwi/platform-go-challenge/internal/models"
 	"github.com/gwi/platform-go-challenge/internal/storage"
 )
@@ -22,101 +26,120 @@ func NewFavoritesService(storage storage.Storage) *FavoritesService {
 }
 
 // CreateList creates a new list for a user
-func (s *FavoritesService) CreateList(userID, listName string) (*models.List, error) {
+func (s *FavoritesService) CreateList(ctx context.Context, userID, listName string) (*models.List, error) {
 	if userID == "" {
-		return nil, fmt.Errorf("user ID is required")
+		return nil, errors.NewValidationError("user ID is required", nil)
 	}
 	if listName == "" {
-		return nil, fmt.Errorf("list name is required")
+		return nil, errors.NewValidationError("list name is required", nil)
 	}
-	return s.storage.CreateList(userID, listName)
+	
+	list, err := s.storage.CreateList(ctx, userID, listName)
+	if err != nil {
+		return nil, wrapStorageError(err, "list")
+	}
+	return list, nil
 }
 
 // GetList retrieves a list by reference
-func (s *FavoritesService) GetList(userID, listReference string) (*models.List, error) {
+func (s *FavoritesService) GetList(ctx context.Context, userID, listReference string) (*models.List, error) {
 	if userID == "" {
-		return nil, fmt.Errorf("user ID is required")
+		return nil, errors.NewValidationError("user ID is required", nil)
 	}
 	if listReference == "" {
-		return nil, fmt.Errorf("list reference is required")
+		return nil, errors.NewValidationError("list reference is required", nil)
 	}
-	return s.storage.GetList(userID, listReference)
+	
+	list, err := s.storage.GetList(ctx, userID, listReference)
+	if err != nil {
+		return nil, wrapStorageError(err, "list")
+	}
+	return list, nil
 }
 
 // GetListByName retrieves a list by name for a user
-func (s *FavoritesService) GetListByName(userID, listName string) (*models.List, error) {
+func (s *FavoritesService) GetListByName(ctx context.Context, userID, listName string) (*models.List, error) {
 	if userID == "" {
 		return nil, fmt.Errorf("user ID is required")
 	}
 	if listName == "" {
 		listName = "default"
 	}
-	return s.storage.GetListByName(userID, listName)
+	return s.storage.GetListByName(ctx, userID, listName)
 }
 
 // GetAllLists returns all lists for a user
-func (s *FavoritesService) GetAllLists(userID string) ([]*models.List, error) {
+func (s *FavoritesService) GetAllLists(ctx context.Context, userID string) ([]*models.List, error) {
 	if userID == "" {
 		return nil, fmt.Errorf("user ID is required")
 	}
-	return s.storage.GetAllLists(userID)
+	return s.storage.GetAllLists(ctx, userID)
 }
 
 // GetAllListsPaginated returns paginated lists for a user
-func (s *FavoritesService) GetAllListsPaginated(userID string, page, pageSize int) ([]*models.List, int, error) {
+func (s *FavoritesService) GetAllListsPaginated(ctx context.Context, userID string, page, pageSize int) ([]*models.List, int, error) {
 	if userID == "" {
 		return nil, 0, fmt.Errorf("user ID is required")
 	}
-	return s.storage.GetAllListsPaginated(userID, page, pageSize)
+	return s.storage.GetAllListsPaginated(ctx, userID, page, pageSize)
 }
 
 // GetAllFavorites returns all favorites for a user across all lists
-func (s *FavoritesService) GetAllFavorites(userID string) ([]*models.Favorite, error) {
+func (s *FavoritesService) GetAllFavorites(ctx context.Context, userID string) ([]*models.Favorite, error) {
 	if userID == "" {
 		return nil, fmt.Errorf("user ID is required")
 	}
-	return s.storage.GetAllFavorites(userID)
+	return s.storage.GetAllFavorites(ctx, userID)
 }
 
 // GetAllFavoritesPaginated returns paginated favorites for a user across all lists
-func (s *FavoritesService) GetAllFavoritesPaginated(userID string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+func (s *FavoritesService) GetAllFavoritesPaginated(ctx context.Context, userID string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
 	if userID == "" {
 		return nil, 0, fmt.Errorf("user ID is required")
 	}
-	return s.storage.GetAllFavoritesPaginated(userID, page, pageSize, filters)
+	return s.storage.GetAllFavoritesPaginated(ctx, userID, page, pageSize, filters)
 }
 
 // DeleteList deletes a list and all its favorites
-func (s *FavoritesService) DeleteList(userID, listReference string) error {
+func (s *FavoritesService) DeleteList(ctx context.Context, userID, listReference string) error {
 	if userID == "" {
-		return fmt.Errorf("user ID is required")
+		return errors.NewValidationError("user ID is required", nil)
 	}
 	if listReference == "" {
-		return fmt.Errorf("list reference is required")
+		return errors.NewValidationError("list reference is required", nil)
 	}
-	return s.storage.DeleteList(userID, listReference)
+	
+	err := s.storage.DeleteList(ctx, userID, listReference)
+	if err != nil {
+		return wrapStorageError(err, "list")
+	}
+	return nil
 }
 
 // CreateAsset creates a new asset
-func (s *FavoritesService) CreateAsset(userID string, asset models.Asset) (models.Asset, error) {
+func (s *FavoritesService) CreateAsset(ctx context.Context, userID string, asset models.Asset) (models.Asset, error) {
 	if userID == "" {
-		return nil, fmt.Errorf("user ID is required")
+		return nil, errors.NewValidationError("user ID is required", nil)
 	}
 
 	if asset == nil {
-		return nil, fmt.Errorf("asset is required")
+		return nil, errors.NewValidationError("asset is required", nil)
 	}
 
 	// Validate asset
 	if err := s.ValidateAsset(asset); err != nil {
-		return nil, fmt.Errorf("invalid asset: %w", err)
+		return nil, errors.NewValidationError("invalid asset", err)
 	}
 
-	return s.storage.CreateAsset(userID, asset)
+	createdAsset, err := s.storage.CreateAsset(ctx, userID, asset)
+	if err != nil {
+		return nil, wrapStorageError(err, "asset")
+	}
+	return createdAsset, nil
 }
 
 // UpdateAsset updates an existing asset
-func (s *FavoritesService) UpdateAsset(assetReference string, asset models.Asset) (models.Asset, error) {
+func (s *FavoritesService) UpdateAsset(ctx context.Context, assetReference string, asset models.Asset) (models.Asset, error) {
 	if assetReference == "" {
 		return nil, fmt.Errorf("asset reference is required")
 	}
@@ -130,23 +153,23 @@ func (s *FavoritesService) UpdateAsset(assetReference string, asset models.Asset
 		return nil, fmt.Errorf("invalid asset: %w", err)
 	}
 
-	return s.storage.UpdateAsset(assetReference, asset)
+	return s.storage.UpdateAsset(ctx, assetReference, asset)
 }
 
 // DeleteAsset deletes an asset
-func (s *FavoritesService) DeleteAsset(assetReference string) error {
+func (s *FavoritesService) DeleteAsset(ctx context.Context, assetReference string) error {
 	if assetReference == "" {
 		return fmt.Errorf("asset reference is required")
 	}
 
-	return s.storage.DeleteAsset(assetReference)
+	return s.storage.DeleteAsset(ctx, assetReference)
 }
 
 // AddFavorite adds an asset to a user's favorites in a specific list
 // assetReference is the asset reference (e.g., "user1_favorite1")
 // listReference is optional, defaults to "default"
 // sortOrder is optional, defaults to next sequential value
-func (s *FavoritesService) AddFavorite(userID, assetReference, listReference string, sortOrder *int) (*models.Favorite, error) {
+func (s *FavoritesService) AddFavorite(ctx context.Context, userID, assetReference, listReference string, sortOrder *int) (*models.Favorite, error) {
 	if userID == "" {
 		return nil, fmt.Errorf("user ID is required")
 	}
@@ -157,10 +180,10 @@ func (s *FavoritesService) AddFavorite(userID, assetReference, listReference str
 
 	// Get or create default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userID, "default")
+		list, err := s.GetListByName(ctx, userID, "default")
 		if err != nil {
 			// Create default list if it doesn't exist
-			list, err = s.CreateList(userID, "default")
+			list, err = s.CreateList(ctx, userID, "default")
 			if err != nil {
 				return nil, err
 			}
@@ -168,11 +191,11 @@ func (s *FavoritesService) AddFavorite(userID, assetReference, listReference str
 		listReference = list.Reference
 	}
 
-	return s.storage.AddFavorite(userID, assetReference, listReference, sortOrder)
+	return s.storage.AddFavorite(ctx, userID, assetReference, listReference, sortOrder)
 }
 
 // RemoveFavorite removes an asset from a user's favorites
-func (s *FavoritesService) RemoveFavorite(userID, assetID, listReference string) error {
+func (s *FavoritesService) RemoveFavorite(ctx context.Context, userID, assetID, listReference string) error {
 	if userID == "" {
 		return fmt.Errorf("user ID is required")
 	}
@@ -183,36 +206,36 @@ func (s *FavoritesService) RemoveFavorite(userID, assetID, listReference string)
 
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userID, "default")
+		list, err := s.GetListByName(ctx, userID, "default")
 		if err != nil {
 			return fmt.Errorf("default list not found: %w", err)
 		}
 		listReference = list.Reference
 	}
 
-	return s.storage.RemoveFavorite(userID, assetID, listReference)
+	return s.storage.RemoveFavorite(ctx, userID, assetID, listReference)
 }
 
-func (s *FavoritesService) RemoveFavoriteByReference(favoriteReference string) error {
+func (s *FavoritesService) RemoveFavoriteByReference(ctx context.Context, favoriteReference string) error {
 	if favoriteReference == "" {
 		return fmt.Errorf("favorite reference is required")
 	}
 
-	return s.storage.RemoveFavoriteByReference(favoriteReference)
+	return s.storage.RemoveFavoriteByReference(ctx, favoriteReference)
 }
 
 // GetFavorites retrieves all favorites for a user
-func (s *FavoritesService) GetFavorites(userID, listReference string) ([]*models.Favorite, error) {
+func (s *FavoritesService) GetFavorites(ctx context.Context, userID, listReference string) ([]*models.Favorite, error) {
 	if userID == "" {
 		return nil, fmt.Errorf("user ID is required")
 	}
 
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userID, "default")
+		list, err := s.GetListByName(ctx, userID, "default")
 		if err != nil {
 			// Create default list if it doesn't exist
-			list, err = s.CreateList(userID, "default")
+			list, err = s.CreateList(ctx, userID, "default")
 			if err != nil {
 				return nil, err
 			}
@@ -220,21 +243,21 @@ func (s *FavoritesService) GetFavorites(userID, listReference string) ([]*models
 		listReference = list.Reference
 	}
 
-	return s.storage.GetFavorites(userID, listReference)
+	return s.storage.GetFavorites(ctx, userID, listReference)
 }
 
 // GetFavoritesPaginated returns paginated favorites for a user in a specific list
-func (s *FavoritesService) GetFavoritesPaginated(userID, listReference string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+func (s *FavoritesService) GetFavoritesPaginated(ctx context.Context, userID, listReference string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
 	if userID == "" {
 		return nil, 0, fmt.Errorf("user ID is required")
 	}
 
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userID, "default")
+		list, err := s.GetListByName(ctx, userID, "default")
 		if err != nil {
 			// Create default list if it doesn't exist
-			list, err = s.CreateList(userID, "default")
+			list, err = s.CreateList(ctx, userID, "default")
 			if err != nil {
 				return nil, 0, err
 			}
@@ -242,11 +265,11 @@ func (s *FavoritesService) GetFavoritesPaginated(userID, listReference string, p
 		listReference = list.Reference
 	}
 
-	return s.storage.GetFavoritesPaginated(userID, listReference, page, pageSize, filters)
+	return s.storage.GetFavoritesPaginated(ctx, userID, listReference, page, pageSize, filters)
 }
 
 // UpdateDescription updates the description of an asset
-func (s *FavoritesService) UpdateDescription(assetID, description string) error {
+func (s *FavoritesService) UpdateDescription(ctx context.Context, assetID, description string) error {
 	if assetID == "" {
 		return fmt.Errorf("asset ID is required")
 	}
@@ -255,11 +278,11 @@ func (s *FavoritesService) UpdateDescription(assetID, description string) error 
 		return fmt.Errorf("description cannot be empty")
 	}
 
-	return s.storage.UpdateAssetDescription(assetID, description)
+	return s.storage.UpdateAssetDescription(ctx, assetID, description)
 }
 
 // UpdateFavoriteSortOrder updates the sort order of a favorite
-func (s *FavoritesService) UpdateFavoriteSortOrder(userReference, favoriteReference string, sortOrder int) error {
+func (s *FavoritesService) UpdateFavoriteSortOrder(ctx context.Context, userReference, favoriteReference string, sortOrder int) error {
 	if userReference == "" {
 		return fmt.Errorf("user reference is required")
 	}
@@ -272,19 +295,24 @@ func (s *FavoritesService) UpdateFavoriteSortOrder(userReference, favoriteRefere
 		return fmt.Errorf("sort order must be non-negative")
 	}
 
-	return s.storage.UpdateFavoriteSortOrder(userReference, favoriteReference, sortOrder)
+	return s.storage.UpdateFavoriteSortOrder(ctx, userReference, favoriteReference, sortOrder)
 }
 
 // GetAsset retrieves an asset by reference
-func (s *FavoritesService) GetAsset(assetReference string) (models.Asset, error) {
+func (s *FavoritesService) GetAsset(ctx context.Context, assetReference string) (models.Asset, error) {
 	if assetReference == "" {
-		return nil, fmt.Errorf("asset reference is required")
+		return nil, errors.NewValidationError("asset reference is required", nil)
 	}
-	return s.storage.GetAsset(assetReference)
+	
+	asset, err := s.storage.GetAsset(ctx, assetReference)
+	if err != nil {
+		return nil, wrapStorageError(err, "asset")
+	}
+	return asset, nil
 }
 
 // GetAllAssetsPaginated retrieves paginated assets with optional filters
-func (s *FavoritesService) GetAllAssetsPaginated(page, pageSize int, filters *models.FilterParams) ([]models.Asset, int, error) {
+func (s *FavoritesService) GetAllAssetsPaginated(ctx context.Context, page, pageSize int, filters *models.FilterParams) ([]models.Asset, int, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -294,60 +322,60 @@ func (s *FavoritesService) GetAllAssetsPaginated(page, pageSize int, filters *mo
 	if pageSize > 100 {
 		pageSize = 100
 	}
-	return s.storage.GetAllAssetsPaginated(page, pageSize, filters)
+	return s.storage.GetAllAssetsPaginated(ctx, page, pageSize, filters)
 }
 
 // GenerateNextAssetID generates the next sequential asset ID for a user
 // Format: {userReference}_favorite{number} (e.g., "user1_favorite1", "user1_favorite2")
-func (s *FavoritesService) GenerateNextAssetID(userReference string) (string, error) {
+func (s *FavoritesService) GenerateNextAssetID(ctx context.Context, userReference string) (string, error) {
 	if userReference == "" {
 		return "", fmt.Errorf("user reference is required")
 	}
-	return s.storage.GenerateNextAssetID(userReference)
+	return s.storage.GenerateNextAssetID(ctx, userReference)
 }
 
 // ValidateAsset validates an asset based on its type
 func (s *FavoritesService) ValidateAsset(asset models.Asset) error {
 	if asset == nil {
-		return fmt.Errorf("asset cannot be nil")
+		return errors.NewValidationError("asset cannot be nil", nil)
 	}
 
 	if asset.GetID() == "" {
-		return fmt.Errorf("asset ID is required")
+		return errors.NewValidationError("asset ID is required", nil)
 	}
 
 	if asset.GetType() == "" {
-		return fmt.Errorf("asset type is required")
+		return errors.NewValidationError("asset type is required", nil)
 	}
 
 	switch asset.GetType() {
 	case models.AssetTypeChart:
 		chart, ok := asset.(*models.Chart)
 		if !ok {
-			return fmt.Errorf("invalid chart asset")
+			return errors.NewValidationError("invalid chart asset", nil)
 		}
 		if chart.Title == "" {
-			return fmt.Errorf("chart title is required")
+			return errors.NewValidationError("chart title is required", nil)
 		}
 
 	case models.AssetTypeInsight:
 		insight, ok := asset.(*models.Insight)
 		if !ok {
-			return fmt.Errorf("invalid insight asset")
+			return errors.NewValidationError("invalid insight asset", nil)
 		}
 		if insight.Text == "" {
-			return fmt.Errorf("insight text is required")
+			return errors.NewValidationError("insight text is required", nil)
 		}
 
 	case models.AssetTypeAudience:
 		// Audience validation is minimal as per requirements
 		_, ok := asset.(*models.Audience)
 		if !ok {
-			return fmt.Errorf("invalid audience asset")
+			return errors.NewValidationError("invalid audience asset", nil)
 		}
 
 	default:
-		return fmt.Errorf("unknown asset type: %s", asset.GetType())
+		return errors.NewValidationError(fmt.Sprintf("unknown asset type: %s", asset.GetType()), nil)
 	}
 
 	return nil
@@ -445,7 +473,49 @@ func (s *FavoritesService) CreateAssetFromJSON(data map[string]interface{}) (mod
 		return audience, nil
 
 	default:
-		return nil, fmt.Errorf("unknown asset type: %s", assetType)
+		return nil, errors.NewValidationError(fmt.Sprintf("unknown asset type: %s", assetType), nil)
 	}
+}
+
+// wrapStorageError converts storage layer errors to AppErrors
+func wrapStorageError(err error, resourceType string) *errors.AppError {
+	if err == nil {
+		return nil
+	}
+
+	// Check if it's already an AppError
+	if appErr, ok := errors.AsAppError(err); ok {
+		return appErr
+	}
+
+	// Check for sql.ErrNoRows
+	if err == sql.ErrNoRows {
+		return errors.NewNotFoundError(resourceType)
+	}
+
+	errStr := strings.ToLower(err.Error())
+
+	// Check for "not found" patterns
+	if strings.Contains(errStr, "not found") {
+		return errors.NewNotFoundError(resourceType)
+	}
+
+	// Check for validation errors
+	if strings.Contains(errStr, "required") || strings.Contains(errStr, "invalid") {
+		return errors.NewValidationError(err.Error(), err)
+	}
+
+	// Check for conflict/duplicate errors
+	if strings.Contains(errStr, "already exists") || strings.Contains(errStr, "duplicate") {
+		return errors.NewConflictError(err.Error())
+	}
+
+	// Check for database connection issues
+	if strings.Contains(errStr, "connection") || strings.Contains(errStr, "timeout") {
+		return errors.NewServiceUnavailableError("Database temporarily unavailable", err)
+	}
+
+	// Default to internal error
+	return errors.NewInternalError(fmt.Sprintf("Failed to %s operation", resourceType), err)
 }
 

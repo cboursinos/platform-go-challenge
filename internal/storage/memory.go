@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -29,7 +30,12 @@ func NewMemoryStorage() *MemoryStorage {
 }
 
 // CreateList creates a new list for a user
-func (s *MemoryStorage) CreateList(userID, listName string) (*models.List, error) {
+func (s *MemoryStorage) CreateList(ctx context.Context, userID, listName string) (*models.List, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -61,7 +67,12 @@ func (s *MemoryStorage) CreateList(userID, listName string) (*models.List, error
 }
 
 // GetList retrieves a list by reference
-func (s *MemoryStorage) GetList(userID, listReference string) (*models.List, error) {
+func (s *MemoryStorage) GetList(ctx context.Context, userID, listReference string) (*models.List, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -78,7 +89,12 @@ func (s *MemoryStorage) GetList(userID, listReference string) (*models.List, err
 }
 
 // GetListByName retrieves a list by name for a user
-func (s *MemoryStorage) GetListByName(userID, listName string) (*models.List, error) {
+func (s *MemoryStorage) GetListByName(ctx context.Context, userID, listName string) (*models.List, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -96,7 +112,12 @@ func (s *MemoryStorage) GetListByName(userID, listName string) (*models.List, er
 }
 
 // GetAllLists returns all lists for a user
-func (s *MemoryStorage) GetAllLists(userID string) ([]*models.List, error) {
+func (s *MemoryStorage) GetAllLists(ctx context.Context, userID string) ([]*models.List, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	s.mu.RLock()
 	listsMap := s.lists[userID]
 	hasLists := listsMap != nil && len(listsMap) > 0
@@ -104,7 +125,7 @@ func (s *MemoryStorage) GetAllLists(userID string) ([]*models.List, error) {
 
 	if !hasLists {
 		// Create default list if none exist
-		defaultList, err := s.CreateList(userID, "default")
+		defaultList, err := s.CreateList(ctx, userID, "default")
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +144,12 @@ func (s *MemoryStorage) GetAllLists(userID string) ([]*models.List, error) {
 }
 
 // DeleteList deletes a list and all its favorites (CASCADE)
-func (s *MemoryStorage) DeleteList(userID, listReference string) error {
+func (s *MemoryStorage) DeleteList(ctx context.Context, userID, listReference string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -147,7 +173,12 @@ func (s *MemoryStorage) DeleteList(userID, listReference string) error {
 }
 
 // CreateAsset creates a new asset
-func (s *MemoryStorage) CreateAsset(userID string, asset models.Asset) (models.Asset, error) {
+func (s *MemoryStorage) CreateAsset(ctx context.Context, userID string, asset models.Asset) (models.Asset, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	if asset == nil {
 		return nil, fmt.Errorf("asset is required")
 	}
@@ -174,7 +205,12 @@ func (s *MemoryStorage) CreateAsset(userID string, asset models.Asset) (models.A
 }
 
 // UpdateAsset updates an existing asset
-func (s *MemoryStorage) UpdateAsset(assetReference string, asset models.Asset) (models.Asset, error) {
+func (s *MemoryStorage) UpdateAsset(ctx context.Context, assetReference string, asset models.Asset) (models.Asset, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	if asset == nil {
 		return nil, fmt.Errorf("asset is required")
 	}
@@ -207,7 +243,12 @@ func (s *MemoryStorage) UpdateAsset(assetReference string, asset models.Asset) (
 }
 
 // DeleteAsset deletes an asset
-func (s *MemoryStorage) DeleteAsset(assetReference string) error {
+func (s *MemoryStorage) DeleteAsset(ctx context.Context, assetReference string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -234,13 +275,18 @@ func (s *MemoryStorage) DeleteAsset(assetReference string) error {
 // AddFavorite adds or updates a favorite for a user in a specific list
 // assetReference is the asset reference (e.g., "user1_favorite1")
 // sortOrder is optional - if nil, will use next sequential value
-func (s *MemoryStorage) AddFavorite(userID, assetReference, listReference string, sortOrder *int) (*models.Favorite, error) {
+func (s *MemoryStorage) AddFavorite(ctx context.Context, userID, assetReference, listReference string, sortOrder *int) (*models.Favorite, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get or create default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userID, "default")
+		list, err := s.GetListByName(ctx, userID, "default")
 		if err != nil {
 			// Create default list if it doesn't exist
-			list, err = s.CreateList(userID, "default")
+			list, err = s.CreateList(ctx, userID, "default")
 			if err != nil {
 				return nil, err
 			}
@@ -324,10 +370,15 @@ func (s *MemoryStorage) AddFavorite(userID, assetReference, listReference string
 }
 
 // RemoveFavorite removes a favorite for a user from a specific list
-func (s *MemoryStorage) RemoveFavorite(userID, assetID, listReference string) error {
+func (s *MemoryStorage) RemoveFavorite(ctx context.Context, userID, assetID, listReference string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userID, "default")
+		list, err := s.GetListByName(ctx, userID, "default")
 		if err != nil {
 			return ErrFavoriteNotFound
 		}
@@ -350,7 +401,12 @@ func (s *MemoryStorage) RemoveFavorite(userID, assetID, listReference string) er
 }
 
 // RemoveFavoriteByReference removes a favorite by its reference
-func (s *MemoryStorage) RemoveFavoriteByReference(favoriteReference string) error {
+func (s *MemoryStorage) RemoveFavoriteByReference(ctx context.Context, favoriteReference string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -370,13 +426,18 @@ func (s *MemoryStorage) RemoveFavoriteByReference(favoriteReference string) erro
 }
 
 // GetFavorites returns all favorites for a user in a specific list
-func (s *MemoryStorage) GetFavorites(userID, listReference string) ([]*models.Favorite, error) {
+func (s *MemoryStorage) GetFavorites(ctx context.Context, userID, listReference string) ([]*models.Favorite, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Get or find default list if listReference is empty
 	if listReference == "" {
-		list, err := s.GetListByName(userID, "default")
+		list, err := s.GetListByName(ctx, userID, "default")
 		if err != nil {
 			// Create default list if it doesn't exist
-			list, err = s.CreateList(userID, "default")
+			list, err = s.CreateList(ctx, userID, "default")
 			if err != nil {
 				return nil, err
 			}
@@ -412,7 +473,12 @@ func (s *MemoryStorage) GetFavorites(userID, listReference string) ([]*models.Fa
 }
 
 // GetFavoritesPaginated returns paginated favorites for a user in a specific list
-func (s *MemoryStorage) GetFavoritesPaginated(userID, listReference string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+func (s *MemoryStorage) GetFavoritesPaginated(ctx context.Context, userID, listReference string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -423,7 +489,7 @@ func (s *MemoryStorage) GetFavoritesPaginated(userID, listReference string, page
 		pageSize = 100
 	}
 
-	allFavorites, err := s.GetFavorites(userID, listReference)
+	allFavorites, err := s.GetFavorites(ctx, userID, listReference)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -476,7 +542,12 @@ func (s *MemoryStorage) applyFilters(favorites []*models.Favorite, filters *mode
 }
 
 // GetAllFavorites returns all favorites for a user across all lists
-func (s *MemoryStorage) GetAllFavorites(userID string) ([]*models.Favorite, error) {
+func (s *MemoryStorage) GetAllFavorites(ctx context.Context, userID string) ([]*models.Favorite, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -515,7 +586,12 @@ func (s *MemoryStorage) GetAllFavorites(userID string) ([]*models.Favorite, erro
 }
 
 // GetAllFavoritesPaginated returns paginated favorites for a user across all lists
-func (s *MemoryStorage) GetAllFavoritesPaginated(userID string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+func (s *MemoryStorage) GetAllFavoritesPaginated(ctx context.Context, userID string, page, pageSize int, filters *models.FilterParams) ([]*models.Favorite, int, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -526,7 +602,7 @@ func (s *MemoryStorage) GetAllFavoritesPaginated(userID string, page, pageSize i
 		pageSize = 100
 	}
 
-	allFavorites, err := s.GetAllFavorites(userID)
+	allFavorites, err := s.GetAllFavorites(ctx, userID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -550,7 +626,12 @@ func (s *MemoryStorage) GetAllFavoritesPaginated(userID string, page, pageSize i
 }
 
 // GetAllListsPaginated returns paginated lists for a user
-func (s *MemoryStorage) GetAllListsPaginated(userID string, page, pageSize int) ([]*models.List, int, error) {
+func (s *MemoryStorage) GetAllListsPaginated(ctx context.Context, userID string, page, pageSize int) ([]*models.List, int, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -561,7 +642,7 @@ func (s *MemoryStorage) GetAllListsPaginated(userID string, page, pageSize int) 
 		pageSize = 100
 	}
 
-	allLists, err := s.GetAllLists(userID)
+	allLists, err := s.GetAllLists(ctx, userID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -582,7 +663,12 @@ func (s *MemoryStorage) GetAllListsPaginated(userID string, page, pageSize int) 
 }
 
 // UpdateAssetDescription updates the description of an asset
-func (s *MemoryStorage) UpdateAssetDescription(assetID, description string) error {
+func (s *MemoryStorage) UpdateAssetDescription(ctx context.Context, assetID, description string) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -609,7 +695,12 @@ func (s *MemoryStorage) UpdateAssetDescription(assetID, description string) erro
 }
 
 // GetAsset retrieves an asset by ID
-func (s *MemoryStorage) GetAsset(assetID string) (models.Asset, error) {
+func (s *MemoryStorage) GetAsset(ctx context.Context, assetID string) (models.Asset, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -622,7 +713,12 @@ func (s *MemoryStorage) GetAsset(assetID string) (models.Asset, error) {
 }
 
 // GetAllAssetsPaginated returns paginated assets
-func (s *MemoryStorage) GetAllAssetsPaginated(page, pageSize int, filters *models.FilterParams) ([]models.Asset, int, error) {
+func (s *MemoryStorage) GetAllAssetsPaginated(ctx context.Context, page, pageSize int, filters *models.FilterParams) ([]models.Asset, int, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	if page < 1 {
 		page = 1
 	}
@@ -712,7 +808,12 @@ func (e *StorageError) Error() string {
 
 // GenerateNextAssetID generates the next sequential asset ID for a user
 // Format: {userReference}_favorite{number} (e.g., "user1_favorite1", "user1_favorite2")
-func (s *MemoryStorage) GenerateNextAssetID(userReference string) (string, error) {
+func (s *MemoryStorage) GenerateNextAssetID(ctx context.Context, userReference string) (string, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -738,7 +839,12 @@ func (s *MemoryStorage) GenerateNextAssetID(userReference string) (string, error
 }
 
 // UpdateFavoriteSortOrder updates the sort order of a favorite
-func (s *MemoryStorage) UpdateFavoriteSortOrder(userReference, favoriteReference string, sortOrder int) error {
+func (s *MemoryStorage) UpdateFavoriteSortOrder(ctx context.Context, userReference, favoriteReference string, sortOrder int) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

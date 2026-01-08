@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ func TestMySQLStorage_AddFavorite(t *testing.T) {
 	}
 	
 	// Create default list first
-	list, err := storage.CreateList(userID, "default")
+	list, err := storage.CreateList(context.Background(), userID, "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -43,11 +44,11 @@ func TestMySQLStorage_AddFavorite(t *testing.T) {
 		YAxis: "Revenue",
 	}
 
-	_, err = storage.CreateAsset(userID, chart)
+	_, err = storage.CreateAsset(context.Background(), userID, chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	favorite, err := storage.AddFavorite(userID, chart.GetID(), list.Reference, nil)
+	favorite, err := storage.AddFavorite(context.Background(), userID, chart.GetID(), list.Reference, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -61,7 +62,7 @@ func TestMySQLStorage_AddFavorite(t *testing.T) {
 	}
 
 	// Verify asset was stored
-	retrievedAsset, err := storage.GetAsset(chart.GetID())
+	retrievedAsset, err := storage.GetAsset(context.Background(), chart.GetID())
 	if err != nil {
 		t.Fatalf("Failed to retrieve asset: %v", err)
 	}
@@ -89,7 +90,7 @@ func TestMySQLStorage_GetFavorites(t *testing.T) {
 	}
 
 	// Create default list first
-	list, err := storage.CreateList(userID, "default")
+	list, err := storage.CreateList(context.Background(), userID, "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -117,18 +118,18 @@ func TestMySQLStorage_GetFavorites(t *testing.T) {
 		Text: "Test insight",
 	}
 
-	_, err = storage.CreateAsset(userID, chart)
+	_, err = storage.CreateAsset(context.Background(), userID, chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	_, err = storage.CreateAsset(userID, insight)
+	_, err = storage.CreateAsset(context.Background(), userID, insight)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, chart.GetID(), list.Reference, nil)
-	storage.AddFavorite(userID, insight.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, chart.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, insight.GetID(), list.Reference, nil)
 
-	favorites, err := storage.GetFavorites(userID, list.Reference)
+	favorites, err := storage.GetFavorites(context.Background(), userID, list.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -156,7 +157,7 @@ func TestMySQLStorage_RemoveFavorite(t *testing.T) {
 	}
 	
 	// Create default list first
-	list, err := storage.CreateList(userID, "default")
+	list, err := storage.CreateList(context.Background(), userID, "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -172,18 +173,18 @@ func TestMySQLStorage_RemoveFavorite(t *testing.T) {
 		Title: "Sales Chart",
 	}
 
-	_, err = storage.CreateAsset(userID, chart)
+	_, err = storage.CreateAsset(context.Background(), userID, chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, chart.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, chart.GetID(), list.Reference, nil)
 
-	err = storage.RemoveFavorite(userID, chart.GetID(), list.Reference)
+	err = storage.RemoveFavorite(context.Background(), userID, chart.GetID(), list.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	favorites, _ := storage.GetFavorites(userID, list.Reference)
+	favorites, _ := storage.GetFavorites(context.Background(), userID, list.Reference)
 	if len(favorites) != 0 {
 		t.Errorf("Expected 0 favorites after removal, got %d", len(favorites))
 	}
@@ -207,7 +208,7 @@ func TestMySQLStorage_UpdateAssetDescription(t *testing.T) {
 	}
 	
 	// Create default list first
-	list, err := storage.CreateList(userID, "default")
+	list, err := storage.CreateList(context.Background(), userID, "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -223,19 +224,19 @@ func TestMySQLStorage_UpdateAssetDescription(t *testing.T) {
 		Title: "Sales Chart",
 	}
 
-	_, err = storage.CreateAsset(userID, chart)
+	_, err = storage.CreateAsset(context.Background(), userID, chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, chart.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, chart.GetID(), list.Reference, nil)
 
 	newDescription := "New Description"
-	err = storage.UpdateAssetDescription(chart.GetID(), newDescription)
+	err = storage.UpdateAssetDescription(context.Background(), chart.GetID(), newDescription)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	favorites, _ := storage.GetFavorites(userID, list.Reference)
+	favorites, _ := storage.GetFavorites(context.Background(), userID, list.Reference)
 	if len(favorites) != 1 {
 		t.Fatalf("Expected 1 favorite, got %d", len(favorites))
 	}
@@ -276,18 +277,18 @@ func TestMySQLStorage_GetAsset(t *testing.T) {
 	}
 	
 	// Create default list first
-	list, err := storage.CreateList(userID, "default")
+	list, err := storage.CreateList(context.Background(), userID, "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
 	
-	_, err = storage.CreateAsset(userID, chart)
+	_, err = storage.CreateAsset(context.Background(), userID, chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, chart.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, chart.GetID(), list.Reference, nil)
 
-	asset, err := storage.GetAsset(chart.GetID())
+	asset, err := storage.GetAsset(context.Background(), chart.GetID())
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -324,7 +325,7 @@ func TestMySQLStorage_AssetTypes(t *testing.T) {
 	}
 
 	// Create default list first
-	list, err := storage.CreateList(userID, "default")
+	list, err := storage.CreateList(context.Background(), userID, "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -341,11 +342,11 @@ func TestMySQLStorage_AssetTypes(t *testing.T) {
 		Text: "40% of millennials spend more than 3 hours on social media daily",
 	}
 
-	_, err = storage.CreateAsset(userID, insight)
+	_, err = storage.CreateAsset(context.Background(), userID, insight)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	favorite, err := storage.AddFavorite(userID, insight.GetID(), list.Reference, nil)
+	favorite, err := storage.AddFavorite(context.Background(), userID, insight.GetID(), list.Reference, nil)
 	if err != nil {
 		t.Fatalf("Failed to add insight: %v", err)
 	}
@@ -378,11 +379,11 @@ func TestMySQLStorage_AssetTypes(t *testing.T) {
 		PurchasesLastMonth:  &purchases,
 	}
 
-	_, err = storage.CreateAsset(userID, audience)
+	_, err = storage.CreateAsset(context.Background(), userID, audience)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	favorite, err = storage.AddFavorite(userID, audience.GetID(), list.Reference, nil)
+	favorite, err = storage.AddFavorite(context.Background(), userID, audience.GetID(), list.Reference, nil)
 	if err != nil {
 		t.Fatalf("Failed to add audience: %v", err)
 	}
@@ -412,19 +413,19 @@ func TestMySQLStorage_ErrorHandling(t *testing.T) {
 	defer storage.Close()
 
 	// Test removing non-existent favorite
-	err = storage.RemoveFavorite("nonexistent_user", "nonexistent_asset", "list_nonexistent_user_default")
+	err = storage.RemoveFavorite(context.Background(), "nonexistent_user", "nonexistent_asset", "list_nonexistent_user_default")
 	if err != ErrFavoriteNotFound {
 		t.Errorf("Expected ErrFavoriteNotFound, got %v", err)
 	}
 
 	// Test updating non-existent asset
-	err = storage.UpdateAssetDescription("nonexistent_asset", "description")
+	err = storage.UpdateAssetDescription(context.Background(), "nonexistent_asset", "description")
 	if err != ErrAssetNotFound {
 		t.Errorf("Expected ErrAssetNotFound, got %v", err)
 	}
 
 	// Test getting non-existent asset
-	_, err = storage.GetAsset("nonexistent_asset")
+	_, err = storage.GetAsset(context.Background(), "nonexistent_asset")
 	if err != ErrAssetNotFound {
 		t.Errorf("Expected ErrAssetNotFound, got %v", err)
 	}
@@ -448,7 +449,7 @@ func TestMySQLStorage_ConcurrentAccess(t *testing.T) {
 	}
 	
 	// Create default list first
-	list, err := storage.CreateList(userID, "default")
+	list, err := storage.CreateList(context.Background(), userID, "default")
 	if err != nil {
 		t.Fatalf("Failed to create list: %v", err)
 	}
@@ -468,11 +469,11 @@ func TestMySQLStorage_ConcurrentAccess(t *testing.T) {
 				},
 				Title: "Chart",
 			}
-			_, err = storage.CreateAsset(userID, chart)
+			_, err = storage.CreateAsset(context.Background(), userID, chart)
 	if err != nil {
 		t.Fatalf("Failed to create asset: %v", err)
 	}
-	storage.AddFavorite(userID, chart.GetID(), list.Reference, nil)
+	storage.AddFavorite(context.Background(), userID, chart.GetID(), list.Reference, nil)
 			done <- true
 		}(i)
 	}
@@ -482,7 +483,7 @@ func TestMySQLStorage_ConcurrentAccess(t *testing.T) {
 		<-done
 	}
 
-	favorites, err := storage.GetFavorites(userID, list.Reference)
+	favorites, err := storage.GetFavorites(context.Background(), userID, list.Reference)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

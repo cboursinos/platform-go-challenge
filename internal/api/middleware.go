@@ -60,19 +60,19 @@ func AuthMiddleware(jwtManager *auth.JWTManager) Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				respondWithError(w, http.StatusUnauthorized, "authorization header required")
+				respondWithErrorLegacy(w, http.StatusUnauthorized, "authorization header required")
 				return
 			}
 
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
-				respondWithError(w, http.StatusUnauthorized, "invalid authorization header format")
+				respondWithErrorLegacy(w, http.StatusUnauthorized, "invalid authorization header format")
 				return
 			}
 
 			userID, err := jwtManager.ValidateToken(parts[1])
 			if err != nil {
-				respondWithError(w, http.StatusUnauthorized, "invalid or expired token")
+				respondWithErrorLegacy(w, http.StatusUnauthorized, "invalid or expired token")
 				return
 			}
 
@@ -90,7 +90,7 @@ func RateLimitMiddleware(requestsPerSecond int, burst int) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !limiter.Allow() {
-				respondWithError(w, http.StatusTooManyRequests, "rate limit exceeded")
+				respondWithErrorLegacy(w, http.StatusTooManyRequests, "rate limit exceeded")
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -116,7 +116,7 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 		defer func() {
 			if err := recover(); err != nil {
 				fmt.Printf("Panic recovered: %v\n", err)
-				respondWithError(w, http.StatusInternalServerError, "internal server error")
+				respondWithErrorLegacy(w, http.StatusInternalServerError, "internal server error")
 			}
 		}()
 		next.ServeHTTP(w, r)
@@ -145,13 +145,47 @@ func ContentTypeMiddleware(next http.Handler) http.Handler {
 		if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" {
 			contentType := r.Header.Get("Content-Type")
 			if !strings.HasPrefix(contentType, "application/json") {
-				respondWithError(w, http.StatusUnsupportedMediaType, "content-type must be application/json")
+				respondWithErrorLegacy(w, http.StatusUnsupportedMediaType, "content-type must be application/json")
 				return
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		next.ServeHTTP(w, r)
 	})
+}
+
+// TimeoutMiddleware adds a per-request timeout to prevent long-running requests
+// from consuming resources indefinitely
+// Uses http.TimeoutHandler which properly handles response writing
+func TimeoutMiddleware(timeout time.Duration) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.TimeoutHandler(next, timeout, "request timeout")
+	}
+}
+
+// TimeoutMiddlewareWithOperationSpecificTimeouts creates a middleware that applies
+// different timeouts based on the HTTP method and route
+func TimeoutMiddlewareWithOperationSpecificTimeouts(defaultTimeout time.Duration) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Determine timeout based on operation type
+			timeout := defaultTimeout
+			
+			// Longer timeout for write operations (POST, PUT, PATCH, DELETE)
+			if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" || r.Method == "DELETE" {
+				timeout = defaultTimeout * 2 // Double timeout for writes
+			}
+			
+			// Shorter timeout for read operations (GET)
+			if r.Method == "GET" {
+				timeout = defaultTimeout
+			}
+
+			// Use http.TimeoutHandler which properly handles context and response writing
+			timeoutHandler := http.TimeoutHandler(next, timeout, "request timeout")
+			timeoutHandler.ServeHTTP(w, r)
+		})
+	}
 }
 
 

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -20,13 +21,13 @@ func TestRedisCache_GetSet(t *testing.T) {
 	value := []byte("test value")
 
 	// Set value
-	err = cache.Set(key, value)
+	err = cache.Set(context.Background(), key, value)
 	if err != nil {
 		t.Fatalf("Failed to set cache: %v", err)
 	}
 
 	// Get value
-	retrieved, err := cache.Get(key)
+	retrieved, err := cache.Get(context.Background(), key)
 	if err != nil {
 		t.Fatalf("Failed to get cache: %v", err)
 	}
@@ -48,7 +49,7 @@ func TestRedisCache_GetMiss(t *testing.T) {
 	defer cache.Close()
 
 	// Try to get non-existent key
-	_, err = cache.Get("test:key:nonexistent")
+	_, err = cache.Get(context.Background(), "test:key:nonexistent")
 	if err != ErrCacheMiss {
 		t.Errorf("Expected ErrCacheMiss, got %v", err)
 	}
@@ -69,22 +70,22 @@ func TestRedisCache_Delete(t *testing.T) {
 	value := []byte("test value")
 
 	// Set value
-	cache.Set(key, value)
+	cache.Set(context.Background(), key, value)
 
 	// Verify it exists
-	_, err = cache.Get(key)
+	_, err = cache.Get(context.Background(), key)
 	if err != nil {
 		t.Fatalf("Key should exist: %v", err)
 	}
 
 	// Delete value
-	err = cache.Delete(key)
+	err = cache.Delete(context.Background(), key)
 	if err != nil {
 		t.Fatalf("Failed to delete cache: %v", err)
 	}
 
 	// Verify it's gone
-	_, err = cache.Get(key)
+	_, err = cache.Get(context.Background(), key)
 	if err != ErrCacheMiss {
 		t.Errorf("Expected ErrCacheMiss after deletion, got %v", err)
 	}
@@ -106,13 +107,13 @@ func TestRedisCache_SetWithTTL(t *testing.T) {
 	ttl := 2 * time.Second
 
 	// Set value with short TTL
-	err = cache.SetWithTTL(key, value, ttl)
+	err = cache.SetWithTTL(context.Background(), key, value, ttl)
 	if err != nil {
 		t.Fatalf("Failed to set cache with TTL: %v", err)
 	}
 
 	// Verify it exists
-	_, err = cache.Get(key)
+	_, err = cache.Get(context.Background(), key)
 	if err != nil {
 		t.Fatalf("Key should exist: %v", err)
 	}
@@ -121,7 +122,7 @@ func TestRedisCache_SetWithTTL(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	// Verify it's expired
-	_, err = cache.Get(key)
+	_, err = cache.Get(context.Background(), key)
 	if err != ErrCacheMiss {
 		t.Errorf("Expected ErrCacheMiss after expiration, got %v", err)
 	}
@@ -147,25 +148,25 @@ func TestRedisCache_DeletePattern(t *testing.T) {
 	}
 
 	for _, key := range keys {
-		cache.Set(key, []byte("value"))
+		cache.Set(context.Background(), key, []byte("value"))
 	}
 
 	// Delete pattern
-	err = cache.DeletePattern("test:pattern:*")
+	err = cache.DeletePattern(context.Background(), "test:pattern:*")
 	if err != nil {
 		t.Fatalf("Failed to delete pattern: %v", err)
 	}
 
 	// Verify pattern keys are deleted
 	for _, key := range keys[:3] {
-		_, err = cache.Get(key)
+		_, err = cache.Get(context.Background(), key)
 		if err != ErrCacheMiss {
 			t.Errorf("Expected key %s to be deleted, but it exists", key)
 		}
 	}
 
 	// Verify other key still exists
-	_, err = cache.Get(keys[3])
+	_, err = cache.Get(context.Background(), keys[3])
 	if err != nil {
 		t.Errorf("Expected key %s to still exist, but it's gone", keys[3])
 	}
@@ -189,7 +190,7 @@ func TestRedisCache_ConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			key := "test:concurrent:" + string(rune('0'+id))
 			value := []byte("value")
-			cache.Set(key, value)
+			cache.Set(context.Background(), key, value)
 			done <- true
 		}(i)
 	}
@@ -202,7 +203,7 @@ func TestRedisCache_ConcurrentAccess(t *testing.T) {
 	// Verify all keys exist
 	for i := 0; i < 10; i++ {
 		key := "test:concurrent:" + string(rune('0'+i))
-		_, err := cache.Get(key)
+		_, err := cache.Get(context.Background(), key)
 		if err != nil {
 			t.Errorf("Expected key %s to exist, got error: %v", key, err)
 		}
