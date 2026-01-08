@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"github.com/gwi/platform-go-challenge/internal/errors"
 	"github.com/gwi/platform-go-challenge/internal/models"
 	"github.com/gwi/platform-go-challenge/internal/service"
@@ -27,6 +28,11 @@ func NewHandler(service *service.FavoritesService) *Handler {
 
 // RegisterRoutes registers all API routes
 func (h *Handler) RegisterRoutes(r chi.Router) {
+	// Swagger documentation
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("http://localhost:8080/swagger/doc.json"), // The url pointing to API definition
+	))
+
 	r.Route("/api/v1", func(r chi.Router) {
 		// Asset management operations (outside of users)
 		r.Route("/assets", func(r chi.Router) {
@@ -67,6 +73,18 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 }
 
 // GetAllLists retrieves all favorites lists for a user (with pagination)
+// @Summary      Get all lists for a user
+// @Description  Retrieves all favorites lists for a user with pagination support
+// @Tags         lists
+// @Accept       json
+// @Produce      json
+// @Param        userID    path      string  true  "User ID (reference)"
+// @Param        page      query     int     false  "Page number (default: 1)"
+// @Param        page_size query     int     false  "Page size (default: 20)"
+// @Success      200       {object}  models.PaginatedResponse
+// @Failure      400       {object}  map[string]string  "Bad request"
+// @Failure      500       {object}  map[string]string  "Internal server error"
+// @Router       /users/{userID}/lists [get]
 func (h *Handler) GetAllLists(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -102,6 +120,17 @@ func (h *Handler) GetAllLists(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateList creates a new list for a user
+// @Summary      Create a new list
+// @Description  Creates a new favorites list for a user
+// @Tags         lists
+// @Accept       json
+// @Produce      json
+// @Param        userID  path      string  true  "User ID (reference)"
+// @Param        request body      object  true  "List creation request"  SchemaExample({"name": "Work"})
+// @Success      201     {object}  models.List
+// @Failure      400     {object}  map[string]string  "Bad request"
+// @Failure      500     {object}  map[string]string  "Internal server error"
+// @Router       /users/{userID}/lists [post]
 func (h *Handler) CreateList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -133,6 +162,17 @@ func (h *Handler) CreateList(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetList retrieves a list by reference
+// @Summary      Get list by reference
+// @Description  Retrieves a specific list by its reference
+// @Tags         lists
+// @Accept       json
+// @Produce      json
+// @Param        userID         path      string  true  "User ID (reference)"
+// @Param        listReference path      string  true  "List reference"
+// @Success      200            {object}  models.List
+// @Failure      400            {object}  map[string]string  "Bad request"
+// @Failure      404            {object}  map[string]string  "List not found"
+// @Router       /users/{userID}/lists/{listReference} [get]
 func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -156,6 +196,17 @@ func (h *Handler) GetList(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteList deletes a list and all its favorites
+// @Summary      Delete a list
+// @Description  Deletes a list and all its associated favorites
+// @Tags         lists
+// @Accept       json
+// @Produce      json
+// @Param        userID         path      string  true  "User ID (reference)"
+// @Param        listReference path      string  true  "List reference"
+// @Success      200            {object}  map[string]string  "List deleted successfully"
+// @Failure      400            {object}  map[string]string  "Bad request"
+// @Failure      404            {object}  map[string]string  "List not found"
+// @Router       /users/{userID}/lists/{listReference} [delete]
 func (h *Handler) DeleteList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -180,6 +231,22 @@ func (h *Handler) DeleteList(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetFavorites retrieves paginated favorites for a user in a specific list
+// @Summary      Get favorites in a list
+// @Description  Retrieves paginated favorites for a user in a specific list with optional filters
+// @Tags         favorites
+// @Accept       json
+// @Produce      json
+// @Param        userID         path      string  true   "User ID (reference)"
+// @Param        listReference  path      string  true   "List reference"
+// @Param        page           query     int     false  "Page number (default: 1)"
+// @Param        page_size      query     int     false  "Page size (default: 20)"
+// @Param        asset_type     query     string  false  "Filter by asset type (chart, insight, audience)"
+// @Param        date_from      query     string  false  "Filter favorites added after this date (ISO 8601)"
+// @Param        date_to        query     string  false  "Filter favorites added before this date (ISO 8601)"
+// @Success      200            {object}  models.PaginatedResponse
+// @Failure      400            {object}  map[string]string  "Bad request"
+// @Failure      500            {object}  map[string]string  "Internal server error"
+// @Router       /users/{userID}/lists/{listReference}/favorites [get]
 func (h *Handler) GetFavorites(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -219,6 +286,21 @@ func (h *Handler) GetFavorites(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetAllFavorites retrieves all favorites for a user across all lists (with pagination)
+// @Summary      Get all favorites for a user
+// @Description  Retrieves all favorites for a user across all lists with pagination and optional filters
+// @Tags         favorites
+// @Accept       json
+// @Produce      json
+// @Param        userID     path      string  true   "User ID (reference)"
+// @Param        page       query     int     false  "Page number (default: 1)"
+// @Param        page_size  query    int     false  "Page size (default: 20)"
+// @Param        asset_type query     string  false "Filter by asset type (chart, insight, audience)"
+// @Param        date_from  query     string  false "Filter favorites added after this date (ISO 8601)"
+// @Param        date_to    query     string  false "Filter favorites added before this date (ISO 8601)"
+// @Success      200        {object}  models.PaginatedResponse
+// @Failure      400        {object}  map[string]string  "Bad request"
+// @Failure      500        {object}  map[string]string  "Internal server error"
+// @Router       /users/{userID}/favorites [get]
 func (h *Handler) GetAllFavorites(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -257,6 +339,16 @@ func (h *Handler) GetAllFavorites(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateAsset creates a new asset
+// @Summary      Create a new asset
+// @Description  Creates a new asset (chart, insight, or audience). Asset ID is automatically generated.
+// @Tags         assets
+// @Accept       json
+// @Produce      json
+// @Param        request  body      models.CreateAssetRequest  true  "Asset creation request"
+// @Success      201      {object}  models.Asset  "Created asset"
+// @Failure      400      {object}  map[string]string  "Bad request"
+// @Failure      500      {object}  map[string]string  "Internal server error"
+// @Router       /assets [post]
 func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req models.CreateAssetRequest
@@ -310,6 +402,19 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetAllAssets retrieves all assets with pagination and optional filters
+// @Summary      Get all assets
+// @Description  Retrieves all assets with pagination and optional filters (asset_type, date_from, date_to)
+// @Tags         assets
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int     false  "Page number (default: 1)"
+// @Param        page_size  query     int     false  "Page size (default: 20)"
+// @Param        asset_type query     string  false  "Filter by asset type (chart, insight, audience)"
+// @Param        date_from  query     string  false  "Filter assets created after this date (ISO 8601)"
+// @Param        date_to    query     string  false  "Filter assets created before this date (ISO 8601)"
+// @Success      200        {object}  models.PaginatedResponse
+// @Failure      500        {object}  map[string]string  "Internal server error"
+// @Router       /assets [get]
 func (h *Handler) GetAllAssets(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// Parse pagination parameters
@@ -342,6 +447,16 @@ func (h *Handler) GetAllAssets(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetAsset retrieves an asset by reference
+// @Summary      Get asset by reference
+// @Description  Retrieves a specific asset by its reference
+// @Tags         assets
+// @Accept       json
+// @Produce      json
+// @Param        assetReference  path      string  true  "Asset reference (ID)"
+// @Success      200              {object}  models.Asset
+// @Failure      400              {object}  map[string]string  "Bad request"
+// @Failure      404              {object}  map[string]string  "Asset not found"
+// @Router       /assets/{assetReference} [get]
 func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	assetReference := chi.URLParam(r, "assetReference")
@@ -360,6 +475,17 @@ func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateAsset updates an existing asset
+// @Summary      Update an asset
+// @Description  Updates an existing asset by its reference
+// @Tags         assets
+// @Accept       json
+// @Produce      json
+// @Param        assetReference path      string  true  "Asset reference (ID)"
+// @Param        request        body      object  true  "Asset update request"
+// @Success      200            {object}  models.Asset
+// @Failure      400            {object}  map[string]string  "Bad request"
+// @Failure      404            {object}  map[string]string  "Asset not found"
+// @Router       /assets/{assetReference} [patch]
 func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	assetReference := chi.URLParam(r, "assetReference")
@@ -406,6 +532,16 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteAsset deletes an asset
+// @Summary      Delete an asset
+// @Description  Deletes an asset by its reference. This will also remove all favorites that reference this asset.
+// @Tags         assets
+// @Accept       json
+// @Produce      json
+// @Param        assetReference path      string  true  "Asset reference (ID)"
+// @Success      200            {object}  map[string]string  "Asset deleted successfully"
+// @Failure      400            {object}  map[string]string  "Bad request"
+// @Failure      404            {object}  map[string]string  "Asset not found"
+// @Router       /assets/{assetReference} [delete]
 func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	assetReference := chi.URLParam(r, "assetReference")
@@ -429,6 +565,18 @@ func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddFavorite adds an asset to a user's favorites in a specific list
+// @Summary      Add favorite to a list
+// @Description  Adds an asset to a user's favorites in a specific list
+// @Tags         favorites
+// @Accept       json
+// @Produce      json
+// @Param        userID         path      string  true  "User ID (reference)"
+// @Param        listReference path      string  true  "List reference"
+// @Param        request        body      object  true  "Add favorite request"  SchemaExample({"asset_reference": "user1_favorite1", "sort_order": 0})
+// @Success      201            {object}  models.Favorite
+// @Failure      400            {object}  map[string]string  "Bad request"
+// @Failure      404            {object}  map[string]string  "Asset or list not found"
+// @Router       /users/{userID}/lists/{listReference}/favorites [post]
 func (h *Handler) AddFavorite(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -471,6 +619,17 @@ func (h *Handler) AddFavorite(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddFavoriteToDefault adds an asset to a user's favorites in the default list
+// @Summary      Add favorite to default list
+// @Description  Adds an asset to the user's default favorites list
+// @Tags         favorites
+// @Accept       json
+// @Produce      json
+// @Param        userID  path      string  true  "User ID (reference)"
+// @Param        request body      object  true  "Add favorite request"  SchemaExample({"asset_reference": "user1_favorite1", "sort_order": 0})
+// @Success      201     {object}  models.Favorite
+// @Failure      400     {object}  map[string]string  "Bad request"
+// @Failure      404     {object}  map[string]string  "Asset or list not found"
+// @Router       /users/{userID}/favorites [post]
 func (h *Handler) AddFavoriteToDefault(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -505,6 +664,18 @@ func (h *Handler) AddFavoriteToDefault(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveFavorite removes an asset from a user's favorites in a specific list
+// @Summary      Remove favorite from a list
+// @Description  Removes an asset from a user's favorites in a specific list
+// @Tags         favorites
+// @Accept       json
+// @Produce      json
+// @Param        userID         path      string  true  "User ID (reference)"
+// @Param        listReference  path      string  true  "List reference"
+// @Param        assetID        path      string  true  "Asset ID (reference)"
+// @Success      200            {object}  map[string]string  "Favorite removed successfully"
+// @Failure      400            {object}  map[string]string  "Bad request"
+// @Failure      404            {object}  map[string]string  "Favorite not found"
+// @Router       /users/{userID}/lists/{listReference}/favorites/{assetID} [delete]
 func (h *Handler) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -546,6 +717,17 @@ func (h *Handler) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveFavoriteFromDefault removes an asset from a user's favorites in the default list
+// @Summary      Remove favorite from default list
+// @Description  Removes an asset from a user's favorites in the default list
+// @Tags         favorites
+// @Accept       json
+// @Produce      json
+// @Param        userID  path      string  true  "User ID (reference)"
+// @Param        assetID path      string  true  "Asset ID (reference)"
+// @Success      200     {object}  map[string]string  "Favorite removed successfully"
+// @Failure      400     {object}  map[string]string  "Bad request"
+// @Failure      404     {object}  map[string]string  "Favorite not found"
+// @Router       /users/{userID}/favorites/{assetID} [delete]
 func (h *Handler) RemoveFavoriteFromDefault(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -583,6 +765,18 @@ func (h *Handler) RemoveFavoriteFromDefault(w http.ResponseWriter, r *http.Reque
 }
 
 // UpdateDescription updates the description of an asset
+// @Summary      Update favorite description
+// @Description  Updates the description of an asset in a user's favorites
+// @Tags         favorites
+// @Accept       json
+// @Produce      json
+// @Param        userID     path      string  true  "User ID (reference)"
+// @Param        assetID    path      string  true  "Asset ID (reference)"
+// @Param        request    body      object  true  "Update description request"  SchemaExample({"description": "Updated description"})
+// @Success      200        {object}  map[string]string  "Description updated successfully"
+// @Failure      400        {object}  map[string]string  "Bad request"
+// @Failure      404        {object}  map[string]string  "Favorite not found"
+// @Router       /users/{userID}/favorites/{assetID}/description [patch]
 func (h *Handler) UpdateDescription(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	assetID := chi.URLParam(r, "assetID")
@@ -616,6 +810,18 @@ func (h *Handler) UpdateDescription(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateSortOrder updates the sort order of a favorite
+// @Summary      Update favorite sort order
+// @Description  Updates the sort order of a favorite within a list
+// @Tags         favorites
+// @Accept       json
+// @Produce      json
+// @Param        userID           path      string  true  "User ID (reference)"
+// @Param        favoriteReference path      string  true  "Favorite reference"
+// @Param        request          body      object  true  "Update sort order request"  SchemaExample({"sort_order": 5})
+// @Success      200              {object}  map[string]string  "Sort order updated successfully"
+// @Failure      400              {object}  map[string]string  "Bad request"
+// @Failure      404              {object}  map[string]string  "Favorite not found"
+// @Router       /users/{userID}/favorites/{favoriteReference}/sort-order [patch]
 func (h *Handler) UpdateSortOrder(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := chi.URLParam(r, "userID")
@@ -656,6 +862,13 @@ func (h *Handler) UpdateSortOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 // HealthCheck returns the health status of the service
+// @Summary      Health check endpoint
+// @Description  Returns the health status of the API service
+// @Tags         health
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "Service is healthy"
+// @Router       /health [get]
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"status":    "healthy",

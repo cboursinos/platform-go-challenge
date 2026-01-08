@@ -32,6 +32,7 @@ A high-performance, production-ready REST API for managing user favorites (asset
 - 🔒 **Security**: JWT authentication (optional), rate limiting, security headers, input validation
 - 🏥 **High Availability**: Health checks, graceful shutdown, panic recovery
 - 📊 **Observability**: Request logging, structured error responses
+- 📚 **API Documentation**: Swagger/OpenAPI documentation with interactive UI
 - 🧪 **Testing**: Comprehensive unit tests with coverage of core functionality
 - 🐳 **Containerization**: Dockerfile with multi-stage build and health checks
 
@@ -182,6 +183,36 @@ go run ./cmd/server
 ```
 
 For detailed configuration instructions, see [ENV_SETUP.md](ENV_SETUP.md).
+
+## API Documentation (Swagger)
+
+The API includes comprehensive Swagger/OpenAPI documentation with an interactive UI.
+
+### Accessing Swagger Documentation
+
+**Option 1: Standalone HTML File (Recommended)**
+- Open `docs/swagger.html` directly in your browser
+- No server required - works offline
+- Complete API documentation with all endpoints
+
+**Option 2: Via Server (Interactive Testing)**
+1. Start the server: `go run cmd/server/main.go`
+2. Access Swagger UI at: **http://localhost:8080/swagger/index.html**
+3. Test endpoints directly from the browser
+
+### Swagger Features
+
+- **Interactive API Explorer**: Test endpoints directly from the browser
+- **Request/Response Examples**: See example payloads for all endpoints
+- **Parameter Documentation**: Detailed descriptions of all query parameters, path parameters, and request bodies
+- **Error Responses**: Documented error codes and messages
+- **OpenAPI 2.0 Specification**: Available in JSON and YAML formats
+
+The Swagger documentation includes all endpoints:
+- Asset management (Create, Read, Update, Delete)
+- List management (Create, Read, Delete)
+- Favorites operations (Add, Remove, Update, Get with pagination and filters)
+- Health check
 
 ## Testing
 
